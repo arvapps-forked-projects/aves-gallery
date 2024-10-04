@@ -1,15 +1,19 @@
 package deckers.thibault.aves
 
 import android.annotation.SuppressLint
+import android.app.KeyguardManager
 import android.app.SearchManager
 import android.appwidget.AppWidgetManager
 import android.content.ClipData
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.TransactionTooLargeException
+import android.provider.MediaStore
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.content.pm.ShortcutInfoCompat
@@ -20,6 +24,8 @@ import deckers.thibault.aves.channel.AvesByteSendingMethodCodec
 import deckers.thibault.aves.channel.calls.AccessibilityHandler
 import deckers.thibault.aves.channel.calls.AnalysisHandler
 import deckers.thibault.aves.channel.calls.AppAdapterHandler
+import deckers.thibault.aves.channel.calls.AppProfileHandler
+import deckers.thibault.aves.channel.calls.Coresult.Companion.safe
 import deckers.thibault.aves.channel.calls.DebugHandler
 import deckers.thibault.aves.channel.calls.DeviceHandler
 import deckers.thibault.aves.channel.calls.EmbeddedDataHandler
@@ -35,6 +41,7 @@ import deckers.thibault.aves.channel.calls.MetadataEditHandler
 import deckers.thibault.aves.channel.calls.MetadataFetchHandler
 import deckers.thibault.aves.channel.calls.SecurityHandler
 import deckers.thibault.aves.channel.calls.StorageHandler
+import deckers.thibault.aves.channel.calls.WallpaperHandler
 import deckers.thibault.aves.channel.calls.window.ActivityWindowHandler
 import deckers.thibault.aves.channel.calls.window.WindowHandler
 import deckers.thibault.aves.channel.streams.ActivityResultStreamHandler
@@ -62,6 +69,7 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 
+// `FlutterFragmentActivity` because of local auth plugin
 open class MainActivity : FlutterFragmentActivity() {
     private val defaultScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -134,7 +142,9 @@ open class MainActivity : FlutterFragmentActivity() {
         MethodChannel(messenger, AccessibilityHandler.CHANNEL).setMethodCallHandler(AccessibilityHandler(this))
         MethodChannel(messenger, MediaEditHandler.CHANNEL).setMethodCallHandler(MediaEditHandler(this))
         MethodChannel(messenger, MetadataEditHandler.CHANNEL).setMethodCallHandler(MetadataEditHandler(this))
+        MethodChannel(messenger, WallpaperHandler.CHANNEL).setMethodCallHandler(WallpaperHandler(this))
         // - need Activity
+        MethodChannel(messenger, AppProfileHandler.CHANNEL).setMethodCallHandler(AppProfileHandler(this))
         MethodChannel(messenger, WindowHandler.CHANNEL).setMethodCallHandler(ActivityWindowHandler(this))
 
         // result streaming: dart -> platform ->->-> dart
@@ -167,7 +177,7 @@ open class MainActivity : FlutterFragmentActivity() {
                     intentDataMap.clear()
                 }
 
-                "submitPickedItems" -> submitPickedItems(call)
+                "submitPickedItems" -> safe(call, result, ::submitPickedItems)
                 "submitPickedCollectionFilters" -> submitPickedCollectionFilters(call)
             }
         }
@@ -223,6 +233,7 @@ open class MainActivity : FlutterFragmentActivity() {
         intentStreamHandler.notifyNewIntent(extractIntentData(intent))
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         when (requestCode) {
@@ -285,30 +296,64 @@ open class MainActivity : FlutterFragmentActivity() {
     open fun extractIntentData(intent: Intent?): FieldMap {
         when (val action = intent?.action) {
             Intent.ACTION_MAIN -> {
-                val fields = hashMapOf<String, Any?>(
-                    INTENT_DATA_KEY_LAUNCHER to intent.hasCategory(Intent.CATEGORY_LAUNCHER),
-                    INTENT_DATA_KEY_SAFE_MODE to intent.getBooleanExtra(EXTRA_KEY_SAFE_MODE, false),
-                )
-                intent.getStringExtra(EXTRA_KEY_PAGE)?.let { page ->
-                    val filters = extractFiltersFromIntent(intent)
-                    fields[INTENT_DATA_KEY_PAGE] = page
-                    fields[INTENT_DATA_KEY_FILTERS] = filters
+                val fields = HashMap<String, Any?>()
+                if (intent.getBooleanExtra(EXTRA_KEY_SAFE_MODE, false)) {
+                    fields[INTENT_DATA_KEY_SAFE_MODE] = true
                 }
+                fields[INTENT_DATA_KEY_PAGE] = intent.getStringExtra(EXTRA_KEY_PAGE)
+                fields[INTENT_DATA_KEY_FILTERS] = extractFiltersFromIntent(intent)
+                fields[INTENT_DATA_KEY_EXPLORER_PATH] = intent.getStringExtra(EXTRA_KEY_EXPLORER_PATH)
                 return fields
             }
 
             Intent.ACTION_VIEW,
             Intent.ACTION_SEND,
+            MediaStore.ACTION_REVIEW,
+            MediaStore.ACTION_REVIEW_SECURE,
             "com.android.camera.action.REVIEW",
             "com.android.camera.action.SPLIT_SCREEN_REVIEW" -> {
                 (intent.data ?: intent.getParcelableExtraCompat<Uri>(Intent.EXTRA_STREAM))?.let { uri ->
+                    if (uri.scheme == "geo") {
+                        return hashMapOf(
+                            INTENT_DATA_KEY_ACTION to INTENT_ACTION_VIEW_GEO,
+                            INTENT_DATA_KEY_URI to uri.toString(),
+                        )
+                    }
+
                     // MIME type is optional
                     val type = intent.type ?: intent.resolveType(this)
-                    return hashMapOf(
+                    val fields = hashMapOf<String, Any?>(
                         INTENT_DATA_KEY_ACTION to INTENT_ACTION_VIEW,
                         INTENT_DATA_KEY_MIME_TYPE to type,
                         INTENT_DATA_KEY_URI to uri.toString(),
                     )
+
+                    val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+                    val isLocked = keyguardManager.isKeyguardLocked
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        setShowWhenLocked(isLocked)
+                    }
+                    if (isLocked) {
+                        // device is locked, so access to content is limited to intent URI by default
+                        fields[INTENT_DATA_KEY_SECURE_URIS] = listOf(uri.toString())
+                    }
+
+                    if (action == MediaStore.ACTION_REVIEW_SECURE) {
+                        val uris = ArrayList<String>()
+                        intent.clipData?.let { clipData ->
+                            for (i in 0 until clipData.itemCount) {
+                                clipData.getItemAt(i).uri?.let { uris.add(it.toString()) }
+                            }
+                        }
+                        if (uris.isNotEmpty()) {
+                            fields[INTENT_DATA_KEY_SECURE_URIS] = uris
+                        }
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && intent.hasExtra(MediaStore.EXTRA_BRIGHTNESS)) {
+                        fields[INTENT_DATA_KEY_BRIGHTNESS] = intent.getFloatExtra(MediaStore.EXTRA_BRIGHTNESS, 0f)
+                    }
+
+                    return fields
                 }
             }
 
@@ -388,28 +433,36 @@ open class MainActivity : FlutterFragmentActivity() {
         return null
     }
 
-    private fun submitPickedItems(call: MethodCall) {
+    open fun submitPickedItems(call: MethodCall, result: MethodChannel.Result) {
         val pickedUris = call.argument<List<String>>("uris")
-        if (!pickedUris.isNullOrEmpty()) {
-            val toUri = { uriString: String -> AppAdapterHandler.getShareableUri(this, Uri.parse(uriString)) }
-            val intent = Intent().apply {
-                val firstUri = toUri(pickedUris.first())
-                if (pickedUris.size == 1) {
-                    data = firstUri
-                } else {
-                    clipData = ClipData.newUri(contentResolver, null, firstUri).apply {
-                        pickedUris.drop(1).forEach {
-                            addItem(ClipData.Item(toUri(it)))
+        try {
+            if (!pickedUris.isNullOrEmpty()) {
+                val toUri = { uriString: String -> AppAdapterHandler.getShareableUri(this, Uri.parse(uriString)) }
+                val intent = Intent().apply {
+                    val firstUri = toUri(pickedUris.first())
+                    if (pickedUris.size == 1) {
+                        data = firstUri
+                    } else {
+                        clipData = ClipData.newUri(contentResolver, null, firstUri).apply {
+                            pickedUris.drop(1).forEach {
+                                addItem(ClipData.Item(toUri(it)))
+                            }
                         }
                     }
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                setResult(RESULT_OK, intent)
+            } else {
+                setResult(RESULT_CANCELED)
             }
-            setResult(RESULT_OK, intent)
-        } else {
-            setResult(RESULT_CANCELED)
+            finish()
+        } catch (e: Exception) {
+            if (e is TransactionTooLargeException || e.cause is TransactionTooLargeException) {
+                result.error("submitPickedItems-large", "transaction too large with ${pickedUris?.size} URIs", e)
+            } else {
+                result.error("submitPickedItems-exception", "failed to pick ${pickedUris?.size} URIs", e)
+            }
         }
-        finish()
     }
 
     private fun submitPickedCollectionFilters(call: MethodCall) {
@@ -438,7 +491,16 @@ open class MainActivity : FlutterFragmentActivity() {
             .setIcon(IconCompat.createWithResource(this, if (supportAdaptiveIcon) R.mipmap.ic_shortcut_search else R.drawable.ic_shortcut_search))
             .setIntent(
                 Intent(Intent.ACTION_MAIN, null, this, MainActivity::class.java)
-                    .putExtra(EXTRA_KEY_PAGE, "/search")
+                    .putExtra(EXTRA_KEY_PAGE, SEARCH_PAGE_ROUTE_NAME)
+            )
+            .build()
+
+        val map = ShortcutInfoCompat.Builder(this, "map")
+            .setShortLabel(getString(R.string.map_shortcut_short_label))
+            .setIcon(IconCompat.createWithResource(this, if (supportAdaptiveIcon) R.mipmap.ic_shortcut_map else R.drawable.ic_shortcut_map))
+            .setIntent(
+                Intent(Intent.ACTION_MAIN, null, this, MainActivity::class.java)
+                    .putExtra(EXTRA_KEY_PAGE, MAP_PAGE_ROUTE_NAME)
             )
             .build()
 
@@ -447,21 +509,12 @@ open class MainActivity : FlutterFragmentActivity() {
             .setIcon(IconCompat.createWithResource(this, if (supportAdaptiveIcon) R.mipmap.ic_shortcut_movie else R.drawable.ic_shortcut_movie))
             .setIntent(
                 Intent(Intent.ACTION_MAIN, null, this, MainActivity::class.java)
-                    .putExtra(EXTRA_KEY_PAGE, "/collection")
+                    .putExtra(EXTRA_KEY_PAGE, COLLECTION_PAGE_ROUTE_NAME)
                     .putExtra("filters", arrayOf("{\"type\":\"mime\",\"mime\":\"video/*\"}"))
             )
             .build()
 
-        val safeMode = ShortcutInfoCompat.Builder(this, "safeMode")
-            .setShortLabel(getString(R.string.safe_mode_shortcut_short_label))
-            .setIcon(IconCompat.createWithResource(this, if (supportAdaptiveIcon) R.mipmap.ic_shortcut_safe_mode else R.drawable.ic_shortcut_safe_mode))
-            .setIntent(
-                Intent(Intent.ACTION_MAIN, null, this, MainActivity::class.java)
-                    .putExtra(EXTRA_KEY_SAFE_MODE, true)
-            )
-            .build()
-
-        val shortcutInfoList = listOf(videos, search, safeMode)
+        val shortcutInfoList = listOf(videos, search, map)
         ShortcutManagerCompat.setDynamicShortcuts(this, shortcutInfoList)
         Log.i(LOG_TAG, "set shortcuts: ${shortcutInfoList.joinToString(", ") { v -> v.id }}")
     }
@@ -491,25 +544,34 @@ open class MainActivity : FlutterFragmentActivity() {
         const val INTENT_ACTION_SEARCH = "search"
         const val INTENT_ACTION_SET_WALLPAPER = "set_wallpaper"
         const val INTENT_ACTION_VIEW = "view"
+        const val INTENT_ACTION_VIEW_GEO = "view_geo"
         const val INTENT_ACTION_WIDGET_OPEN = "widget_open"
         const val INTENT_ACTION_WIDGET_SETTINGS = "widget_settings"
 
         const val INTENT_DATA_KEY_ACTION = "action"
         const val INTENT_DATA_KEY_ALLOW_MULTIPLE = "allowMultiple"
+        const val INTENT_DATA_KEY_BRIGHTNESS = "brightness"
+        const val INTENT_DATA_KEY_EXPLORER_PATH = "explorerPath"
         const val INTENT_DATA_KEY_FILTERS = "filters"
-        const val INTENT_DATA_KEY_LAUNCHER = "launcher"
         const val INTENT_DATA_KEY_MIME_TYPE = "mimeType"
         const val INTENT_DATA_KEY_PAGE = "page"
         const val INTENT_DATA_KEY_QUERY = "query"
         const val INTENT_DATA_KEY_SAFE_MODE = "safeMode"
+        const val INTENT_DATA_KEY_SECURE_URIS = "secureUris"
         const val INTENT_DATA_KEY_URI = "uri"
         const val INTENT_DATA_KEY_WIDGET_ID = "widgetId"
 
         const val EXTRA_KEY_PAGE = "page"
+        const val EXTRA_KEY_EXPLORER_PATH = "explorerPath"
         const val EXTRA_KEY_FILTERS_ARRAY = "filters"
         const val EXTRA_KEY_FILTERS_STRING = "filtersString"
         const val EXTRA_KEY_SAFE_MODE = "safeMode"
         const val EXTRA_KEY_WIDGET_ID = "widgetId"
+
+        // dart page routes
+        const val COLLECTION_PAGE_ROUTE_NAME = "/collection"
+        const val MAP_PAGE_ROUTE_NAME = "/map"
+        const val SEARCH_PAGE_ROUTE_NAME = "/search"
 
         // request code to pending runnable
         val pendingStorageAccessResultHandlers = ConcurrentHashMap<Int, PendingStorageAccessResultHandler>()

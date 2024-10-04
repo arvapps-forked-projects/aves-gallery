@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:aves/model/entry/entry.dart';
 import 'package:aves/model/entry/extensions/multipage.dart';
-import 'package:aves/model/events.dart';
 import 'package:aves/model/filters/filters.dart';
 import 'package:aves/model/selection.dart';
 import 'package:aves/model/settings/settings.dart';
@@ -15,10 +14,10 @@ import 'package:aves/widgets/filter_grids/common/action_delegates/chip.dart';
 import 'package:aves/widgets/viewer/action/entry_info_action_delegate.dart';
 import 'package:aves/widgets/viewer/controls/notifications.dart';
 import 'package:aves/widgets/viewer/info/basic_section.dart';
+import 'package:aves/widgets/viewer/info/color_section.dart';
 import 'package:aves/widgets/viewer/info/embedded/embedded_data_opener.dart';
 import 'package:aves/widgets/viewer/info/info_app_bar.dart';
 import 'package:aves/widgets/viewer/info/location_section.dart';
-import 'package:aves/widgets/viewer/info/color_section.dart';
 import 'package:aves/widgets/viewer/info/metadata/metadata_dir.dart';
 import 'package:aves/widgets/viewer/info/metadata/metadata_section.dart';
 import 'package:aves/widgets/viewer/multipage/conductor.dart';
@@ -85,7 +84,7 @@ class _InfoPageState extends State<InfoPage> {
                   );
                 }
 
-                return mainEntry.isBurst
+                return mainEntry.isStack
                     ? PageEntryBuilder(
                         multiPageController: context.read<MultiPageConductor>().getController(mainEntry),
                         builder: (pageEntry) => _buildContent(pageEntry: pageEntry),
@@ -124,7 +123,7 @@ class _InfoPageState extends State<InfoPage> {
     ShowImageNotification().dispatch(context);
     _scrollController.animateTo(
       0,
-      duration: ADurations.pageTransitionAnimation,
+      duration: ADurations.pageTransitionLoose,
       curve: Curves.easeInOut,
     );
   }
@@ -277,7 +276,8 @@ class _InfoPageContentState extends State<_InfoPageContent> {
   }
 
   void _onActionDelegateEvent(ActionEvent<EntryAction> event) {
-    Future.delayed(ADurations.dialogTransitionAnimation).then((_) {
+    Future.delayed(ADurations.dialogTransitionLoose).then((_) {
+      if (!mounted) return;
       if (event is ActionStartedEvent) {
         _isEditingMetadataNotifier.value = event.action;
       } else if (event is ActionEndedEvent) {
@@ -286,5 +286,8 @@ class _InfoPageContentState extends State<_InfoPageContent> {
     });
   }
 
-  void _onFilter(CollectionFilter filter) => FilterSelectedNotification(filter).dispatch(context);
+  void _onFilter(CollectionFilter filter) {
+    if (!mounted) return;
+    FilterSelectedNotification(filter).dispatch(context);
+  }
 }

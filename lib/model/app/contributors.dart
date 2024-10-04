@@ -91,22 +91,38 @@ class Contributors {
     Contributor('cheese', 'deanlemans5646@gmail.com'),
     Contributor('Owen Elderbroek', 'o.elderbroek@gmail.com'),
     Contributor('Maxi', 'maxitendo01@proton.me'),
+    Contributor('Jerguš Fonfer', 'caro.jf@protonmail.com'),
+    Contributor('elfriob', 'elfriob@ya.ru'),
+    Contributor('Stephan Paternotte', 'stephan@paternottes.net'),
+    Contributor('Tung Anh', 'buihuutunganh2007@gmail.com'),
+    Contributor('Adrien N', 'adriennathaniel1999@gmail.com'),
+    Contributor('Shift18', 'bribable.lawyer@posteo.net'),
+    Contributor('Andreas Håll', 'ante_skalman@hotmail.com'),
+    Contributor('Scorza9999', 'oliva.scorza@gmail.com'),
+    Contributor('Taufan', 'taufanxxx@gmail.com'),
+    Contributor('Leo Aaua Felix', 'g00g7el@gmail.com'),
+    Contributor('-J-', 'heyj0e@tuta.io'),
+    Contributor('bittin1ddc447d824349b2', 'bittin@reimu.nl'),
     // Contributor('Alvi Khan', 'aveenalvi@gmail.com'), // Bengali
     // Contributor('Htet Oo Hlaing', 'htetoh2006@outlook.com'), // Burmese
     // Contributor('Khant', 'khant@users.noreply.hosted.weblate.org'), // Burmese
     // Contributor('Grooty12', 'Rasmus@rosendahl-kaa.name'), // Danish
+    // Contributor('Victor M', 'victormorita@tuta.io'), // Danish
     // Contributor('Åzze', 'laitinen.jere222@gmail.com'), // Finnish
+    // Contributor('Olli', 'ollinen@ollit.dev'), // Finnish
     // Contributor('Idj', 'joneltmp+goahn@gmail.com'), // Hebrew
     // Contributor('Rohit Burman', 'rohitburman31p@rediffmail.com'), // Hindi
     // Contributor('AJ07', 'ajaykumarmeena676@gmail.com'), // Hindi
+    // Contributor('Sartaj', 'ssaarrttaajj111@gmail.com'), // Hindi
+    // Contributor('Anurag Samota', 'anuragsamotasamota@gmail.com'), // Hindi
     // Contributor('Chethan', 'chethan@users.noreply.hosted.weblate.org'), // Kannada
     // Contributor('GoRaN', 'gorangharib.909@gmail.com'), // Kurdish (Central)
     // Contributor('Rasti K5', 'rasti.khdhr@gmail.com'), // Kurdish (Central)
     // Contributor('Raman', 'xysed@tutanota.com'), // Malayalam
     // Contributor('Subham Jena', 'subhamjena8465@gmail.com'), // Odia
     // Contributor('Prasanta-Hembram', 'Prasantahembram720@gmail.com'), // Santali
+    // Contributor('Enenra', 'nnra2210@gmail.com'), // Serbian
     // Contributor('mytja', 'mamnju21@gmail.com'), // Slovenian
-    // Contributor('Shift18', 'bribable.lawyer@posteo.net'), // Swedish
     // Contributor('Nattapong K', 'mixer5056@gmail.com'), // Thai
   };
 }

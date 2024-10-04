@@ -6,16 +6,140 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- Albums / Countries / Tags: show selection in Collection
+- Map: OpenTopoMap raster layer
+- Map: OSM Liberty vector layer (hosted by OSM Americana)
+- Interoperability: receiving `geo:` URI generally opens map page at location
+- Interoperability: receiving `geo:` URI when editing item location fills in coordinates
+- Map basic app shortcut
+- Enterprise: support for work profile switching from the drawer
+- Settings: hidden path filters are merged with others and can be toggled
+
+### Removed
+
+- `Safe mode` basic app shortcut
+
+## <a id="v1.11.13"></a>[v1.11.13] - 2024-09-17
+
+### Added
+
+- support opening from the lock screen
 
 ### Changed
 
+- upgraded Flutter to stable v3.24.3
+
+### Fixed
+
+- crash when cataloguing some malformed MP4 files
+- inconsistent launch screen
+
+## <a id="v1.11.12"></a>[v1.11.12] - 2024-09-16 [YANKED AGAIN!]
+
+## <a id="v1.11.11"></a>[v1.11.11] - 2024-09-16 [YANKED]
+
+## <a id="v1.11.10"></a>[v1.11.10] - 2024-09-01
+
+### Added
+
+- Swedish translation (thanks Shift18, Andreas Håll)
+
+### Changed
+
+- request notification permission when launching scanning service
+- upgraded Flutter to stable v3.24.1
+
+### Fixed
+
+- duplicates from new item loading/refreshing
+
+## <a id="v1.11.9"></a>[v1.11.9] - 2024-08-07
+
+### Added
+
+- Viewer: display more items in tag/copy/move quick action choosers
+- Viewer: long descriptions are scrollable when overlay is expanded by tap
+- Collection: sort by duration
+- Map: open external map app from map views
+- Explorer: stats
+
+### Changed
+
+- Accessibility: more animations and effects are suppressed when animations are disabled
+- upgraded Flutter to stable v3.24.0
+
+### Fixed
+
+- opening app from launcher always showing home page
+- collection quick actions not showing in the top bar nor the menu
+- multiple widget setup after device reboot
+
+## <a id="v1.11.8"></a>[v1.11.8] - 2024-07-19
+
+### Added
+
+- Explorer: set custom path as home
+- Explorer: create shortcut to custom path
+
+### Changed
+
+- target Android 15 (API 35)
+- upgraded Flutter to stable v3.22.3
+
+### Fixed
+
+- crash when cataloguing some PNG files
+
+## <a id="v1.11.7"></a>[v1.11.7] - 2024-07-18 [YANKED AGAIN!]
+
+## <a id="v1.11.6"></a>[v1.11.6] - 2024-07-17 [YANKED]
+
+## <a id="v1.11.5"></a>[v1.11.5] - 2024-07-11
+
+### Added
+
+- Collection: stack RAW and JPEG with same file names
+- Collection: ask to rename/replace/skip when converting items with name conflict
+- Export: bulk converting motion photos to still images
+- Explorer: view folder tree and filter paths
+
+### Fixed
+
+- switching to PiP when changing device orientation on Android >=13
+- handling wallpaper intent without URI
+- sizing widgets with some launchers on Android >=12
+
+### Removed
+
+- `huawei` app flavor
+
+## <a id="v1.11.4"></a>[v1.11.4] - 2024-07-09 [YANKED]
+
+## <a id="v1.11.3"></a>[v1.11.3] - 2024-06-17
+
+### Added
+
+- handle `MediaStore.ACTION_REVIEW` intent
+
+## <a id="v1.11.2"></a>[v1.11.2] - 2024-06-11
+
+### Added
+
+- Albums / Countries / Tags: show selection in Collection
+- allow shifting dates by seconds
+
+### Changed
+
+- opening app from launcher shows home page only when exited by back button
 - Screen saver: black background, consistent with slideshow
 - upgraded Flutter to stable v3.22.2
 
 ### Removed
 
 - support for Android KitKat (API 19)
+
+### Fixed
+
+- crash when cataloguing large images
 
 ## <a id="v1.11.1"></a>[v1.11.1] - 2024-05-03
 

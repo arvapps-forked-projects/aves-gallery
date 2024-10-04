@@ -6,7 +6,7 @@ import 'package:aves/model/metadata/catalog.dart';
 import 'package:aves/model/metadata/trash.dart';
 import 'package:aves/model/vaults/details.dart';
 import 'package:aves/model/vaults/vaults.dart';
-import 'package:aves/model/video_playback.dart';
+import 'package:aves/model/viewer/video_playback.dart';
 import 'package:aves/ref/locales.dart';
 import 'package:aves/services/common/services.dart';
 import 'package:aves/utils/file_utils.dart';
@@ -70,7 +70,7 @@ class _DebugAppDatabaseSectionState extends State<DebugAppDatabaseSection> with 
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                        onPressed: () => metadataDb.reset().then((_) => _reload()),
+                        onPressed: () => localMediaDb.reset().then((_) => _reload()),
                         child: const Text('Reset'),
                       ),
                     ],
@@ -93,7 +93,7 @@ class _DebugAppDatabaseSectionState extends State<DebugAppDatabaseSection> with 
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                        onPressed: () => metadataDb.clearEntries().then((_) => _reload()),
+                        onPressed: () => localMediaDb.clearEntries().then((_) => _reload()),
                         child: const Text('Clear'),
                       ),
                     ],
@@ -114,7 +114,7 @@ class _DebugAppDatabaseSectionState extends State<DebugAppDatabaseSection> with 
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                        onPressed: () => metadataDb.clearDates().then((_) => _reload()),
+                        onPressed: () => localMediaDb.clearDates().then((_) => _reload()),
                         child: const Text('Clear'),
                       ),
                     ],
@@ -135,7 +135,7 @@ class _DebugAppDatabaseSectionState extends State<DebugAppDatabaseSection> with 
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                        onPressed: () => metadataDb.clearCatalogMetadata().then((_) => _reload()),
+                        onPressed: () => localMediaDb.clearCatalogMetadata().then((_) => _reload()),
                         child: const Text('Clear'),
                       ),
                     ],
@@ -156,7 +156,7 @@ class _DebugAppDatabaseSectionState extends State<DebugAppDatabaseSection> with 
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                        onPressed: () => metadataDb.clearAddresses().then((_) => _reload()),
+                        onPressed: () => localMediaDb.clearAddresses().then((_) => _reload()),
                         child: const Text('Clear'),
                       ),
                     ],
@@ -177,7 +177,7 @@ class _DebugAppDatabaseSectionState extends State<DebugAppDatabaseSection> with 
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                        onPressed: () => metadataDb.clearTrashDetails().then((_) => _reload()),
+                        onPressed: () => localMediaDb.clearTrashDetails().then((_) => _reload()),
                         child: const Text('Clear'),
                       ),
                     ],
@@ -261,7 +261,7 @@ class _DebugAppDatabaseSectionState extends State<DebugAppDatabaseSection> with 
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                        onPressed: () => metadataDb.clearVideoPlayback().then((_) => _reload()),
+                        onPressed: () => localMediaDb.clearVideoPlayback().then((_) => _reload()),
                         child: const Text('Clear'),
                       ),
                     ],
@@ -281,16 +281,16 @@ class _DebugAppDatabaseSectionState extends State<DebugAppDatabaseSection> with 
   }
   
   void _startDbReport() {
-    _dbFileSizeLoader = metadataDb.dbFileSize();
-    _dbEntryLoader = metadataDb.loadEntries();
-    _dbDateLoader = metadataDb.loadDates();
-    _dbMetadataLoader = metadataDb.loadCatalogMetadata();
-    _dbAddressLoader = metadataDb.loadAddresses();
-    _dbTrashLoader = metadataDb.loadAllTrashDetails();
-    _dbVaultsLoader = metadataDb.loadAllVaults();
-    _dbFavouritesLoader = metadataDb.loadAllFavourites();
-    _dbCoversLoader = metadataDb.loadAllCovers();
-    _dbVideoPlaybackLoader = metadataDb.loadAllVideoPlayback();
+    _dbFileSizeLoader = localMediaDb.dbFileSize();
+    _dbEntryLoader = localMediaDb.loadEntries();
+    _dbDateLoader = localMediaDb.loadDates();
+    _dbMetadataLoader = localMediaDb.loadCatalogMetadata();
+    _dbAddressLoader = localMediaDb.loadAddresses();
+    _dbTrashLoader = localMediaDb.loadAllTrashDetails();
+    _dbVaultsLoader = localMediaDb.loadAllVaults();
+    _dbFavouritesLoader = localMediaDb.loadAllFavourites();
+    _dbCoversLoader = localMediaDb.loadAllCovers();
+    _dbVideoPlaybackLoader = localMediaDb.loadAllVideoPlayback();
     setState(() {});
   }
   

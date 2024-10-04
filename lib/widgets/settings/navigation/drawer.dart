@@ -4,6 +4,7 @@ import 'package:aves/model/settings/settings.dart';
 import 'package:aves/widgets/common/basic/scaffold.dart';
 import 'package:aves/widgets/common/extensions/build_context.dart';
 import 'package:aves/widgets/common/search/page.dart';
+import 'package:aves/widgets/explorer/explorer_page.dart';
 import 'package:aves/widgets/filter_grids/albums_page.dart';
 import 'package:aves/widgets/filter_grids/countries_page.dart';
 import 'package:aves/widgets/filter_grids/places_page.dart';
@@ -41,6 +42,7 @@ class _NavigationDrawerEditorPageState extends State<NavigationDrawerEditorPage>
     CountryListPage.routeName,
     PlaceListPage.routeName,
     TagListPage.routeName,
+    ExplorerPage.routeName,
     SearchPage.routeName,
   };
 
@@ -102,7 +104,7 @@ class _NavigationDrawerEditorPageState extends State<NavigationDrawerEditorPage>
         ),
         body: PopScope(
           canPop: true,
-          onPopInvoked: (didPop) {
+          onPopInvokedWithResult: (didPop, result) {
             settings.drawerTypeBookmarks = _typeItems.where(_visibleTypes.contains).toList();
             settings.drawerAlbumBookmarks = _albumItems;
             settings.drawerPageBookmarks = _pageItems.where(_visiblePages.contains).toList();

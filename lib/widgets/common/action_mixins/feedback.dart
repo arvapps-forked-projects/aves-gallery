@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:aves/model/settings/enums/accessibility_animations.dart';
 import 'package:aves/model/settings/enums/accessibility_timeout.dart';
 import 'package:aves/model/settings/settings.dart';
 import 'package:aves/theme/colors.dart';
@@ -25,6 +24,7 @@ typedef MarginComputer = EdgeInsets Function(BuildContext context);
 
 mixin FeedbackMixin {
   static final ValueNotifier<MarginComputer?> snackBarMarginOverrideNotifier = ValueNotifier(null);
+  static OverlaySupportEntry? _overlayNotificationEntry;
 
   static EdgeInsets snackBarMarginDefault(BuildContext context) {
     return EdgeInsets.only(
@@ -32,7 +32,11 @@ mixin FeedbackMixin {
     );
   }
 
-  void dismissFeedback(BuildContext context) => ScaffoldMessenger.of(context).hideCurrentSnackBar();
+  void dismissFeedback(BuildContext context) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    _overlayNotificationEntry?.dismiss();
+    _overlayNotificationEntry = null;
+  }
 
   void showFeedback(BuildContext context, FeedbackType type, String message, [SnackBarAction? action]) {
     ScaffoldMessengerState? scaffoldMessenger;
@@ -68,8 +72,7 @@ mixin FeedbackMixin {
         // and space under the snack bar `margin` does not receive gestures
         // (because it is used by the `Dismissible` wrapping the snack bar)
         // so we use `showOverlayNotification` instead
-        OverlaySupportEntry? notificationOverlayEntry;
-        notificationOverlayEntry = showOverlayNotification(
+        _overlayNotificationEntry = showOverlayNotification(
           (context) => SafeArea(
             bottom: false,
             child: ValueListenableBuilder<MarginComputer?>(
@@ -78,7 +81,7 @@ mixin FeedbackMixin {
                 final margin = (marginComputer ?? snackBarMarginDefault).call(context);
                 return AnimatedPadding(
                   padding: margin,
-                  duration: ADurations.pageTransitionAnimation,
+                  duration: ADurations.pageTransitionLoose,
                   child: child,
                 );
               },
@@ -90,7 +93,7 @@ mixin FeedbackMixin {
                           foregroundColor: WidgetStateProperty.all(snackBarTheme.actionTextColor),
                         ),
                         onPressed: () {
-                          notificationOverlayEntry?.dismiss();
+                          dismissFeedback(context);
                           action.onPressed();
                         },
                         child: Text(action.label),
@@ -98,7 +101,7 @@ mixin FeedbackMixin {
                     : null,
                 animation: kAlwaysCompleteAnimation,
                 dismissDirection: DismissDirection.horizontal,
-                onDismiss: () => notificationOverlayEntry?.dismiss(),
+                onDismiss: () => dismissFeedback(context),
               ),
             ),
           ),
@@ -122,7 +125,7 @@ mixin FeedbackMixin {
 
   static double snackBarHorizontalPadding(SnackBarThemeData snackBarTheme) {
     final isFloatingSnackBar = (snackBarTheme.behavior ?? SnackBarBehavior.fixed) == SnackBarBehavior.floating;
-    final horizontalPadding = isFloatingSnackBar ? 16.0 : 24.0;
+    final double horizontalPadding = isFloatingSnackBar ? 16.0 : 24.0;
     return horizontalPadding;
   }
 
@@ -163,6 +166,9 @@ class ReportOverlay<T> extends StatefulWidget {
   final VoidCallback? onCancel;
   final void Function(Set<T> processed) onDone;
 
+  static const double diameter = 160.0;
+  static const double strokeWidth = 8.0;
+
   const ReportOverlay({
     super.key,
     required this.opStream,
@@ -178,13 +184,11 @@ class ReportOverlay<T> extends StatefulWidget {
 class _ReportOverlayState<T> extends State<ReportOverlay<T>> with SingleTickerProviderStateMixin {
   final processed = <T>{};
   late AnimationController _animationController;
-  late Animation<double> _animation;
+  late CurvedAnimation _animation;
 
   Stream<T> get opStream => widget.opStream;
 
-  static const fontSize = 18.0;
-  static const diameter = 160.0;
-  static const strokeWidth = 8.0;
+  static const double fontSize = 18.0;
 
   @override
   void initState() {
@@ -212,18 +216,21 @@ class _ReportOverlayState<T> extends State<ReportOverlay<T>> with SingleTickerPr
 
   @override
   void dispose() {
+    _animation.dispose();
     _animationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    const diameter = ReportOverlay.diameter;
+    const strokeWidth = ReportOverlay.strokeWidth;
     final percentFormatter = NumberFormat.percentPattern(context.locale);
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final progressColor = colorScheme.primary;
-    final animate = context.select<Settings, bool>((v) => v.accessibilityAnimations.animate);
+    final animate = context.select<Settings, bool>((v) => v.animate);
     return PopScope(
       canPop: false,
       child: StreamBuilder<T>(
@@ -245,16 +252,7 @@ class _ReportOverlayState<T> extends State<ReportOverlay<T>> with SingleTickerPr
                     shape: BoxShape.circle,
                   ),
                 ),
-                if (animate)
-                  Container(
-                    width: diameter,
-                    height: diameter,
-                    padding: const EdgeInsets.all(strokeWidth / 2),
-                    child: CircularProgressIndicator(
-                      color: progressColor.withOpacity(.1),
-                      strokeWidth: strokeWidth,
-                    ),
-                  ),
+                if (animate) const ReportProgressIndicator(opacity: .1),
                 CircularPercentIndicator(
                   percent: percent,
                   lineWidth: strokeWidth,
@@ -297,6 +295,32 @@ class _ReportOverlayState<T> extends State<ReportOverlay<T>> with SingleTickerPr
   }
 }
 
+class ReportProgressIndicator extends StatelessWidget {
+  final double opacity;
+
+  const ReportProgressIndicator({
+    super.key,
+    this.opacity = 1,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const diameter = ReportOverlay.diameter;
+    const strokeWidth = ReportOverlay.strokeWidth;
+    final progressColor = Theme.of(context).colorScheme.primary;
+
+    return Container(
+      width: diameter,
+      height: diameter,
+      padding: const EdgeInsets.all(strokeWidth / 2),
+      child: CircularProgressIndicator(
+        color: progressColor.withOpacity(opacity),
+        strokeWidth: strokeWidth,
+      ),
+    );
+  }
+}
+
 class _FeedbackMessage extends StatefulWidget {
   final FeedbackType type;
   final String message;
@@ -317,6 +341,7 @@ class _FeedbackMessage extends StatefulWidget {
 
 class _FeedbackMessageState extends State<_FeedbackMessage> with SingleTickerProviderStateMixin {
   AnimationController? _animationController;
+  CurvedAnimation? _animation;
   Animation<int>? _remainingDurationMillis;
   int? _totalDurationMillis;
 
@@ -333,19 +358,21 @@ class _FeedbackMessageState extends State<_FeedbackMessage> with SingleTickerPro
         duration: effectiveDuration,
         vsync: this,
       );
+      _animation = CurvedAnimation(
+        parent: _animationController!,
+        curve: Curves.linear,
+      );
       _remainingDurationMillis = IntTween(
         begin: effectiveDuration.inMilliseconds,
         end: 0,
-      ).animate(CurvedAnimation(
-        parent: _animationController!,
-        curve: Curves.linear,
-      ));
+      ).animate(_animation!);
       _animationController!.forward();
     }
   }
 
   @override
   void dispose() {
+    _animation?.dispose();
     _animationController?.dispose();
     super.dispose();
   }

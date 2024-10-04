@@ -1,6 +1,8 @@
+import 'package:aves/model/settings/settings.dart';
 import 'package:aves/widgets/common/search/delegate.dart';
 import 'package:aves/widgets/common/search/page.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 // adapted from Flutter `_SearchBody` in `/material/search.dart`
 enum SearchBody { suggestions, results }
@@ -17,6 +19,14 @@ class SearchPageRoute<T> extends PageRoute<T> {
       'before opening another search with the same delegate instance.',
     );
     delegate.route = this;
+  }
+
+  @override
+  void dispose() {
+    // `delegate` is always created by the caller at route creation time,
+    // so it should always be disposed when the route is disposed
+    delegate.dispose();
+    super.dispose();
   }
 
   final AvesSearchDelegate delegate;
@@ -42,10 +52,13 @@ class SearchPageRoute<T> extends PageRoute<T> {
   ) {
     // a simple fade is usually more fitting for a search page,
     // instead of the `pageTransitionsTheme` used by the rest of the app
-    return FadeTransition(
-      opacity: animation,
-      child: child,
-    );
+    final animate = context.read<Settings>().animate;
+    return animate
+        ? FadeTransition(
+            opacity: animation,
+            child: child,
+          )
+        : child;
   }
 
   @override

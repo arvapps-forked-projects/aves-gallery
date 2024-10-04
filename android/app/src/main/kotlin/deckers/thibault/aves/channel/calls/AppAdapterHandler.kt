@@ -1,6 +1,10 @@
 package deckers.thibault.aves.channel.calls
 
-import android.content.*
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.ContentResolver
+import android.content.Context
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.res.Configuration
 import android.content.res.Resources
@@ -19,6 +23,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DecodeFormat
 import com.bumptech.glide.request.RequestOptions
 import deckers.thibault.aves.MainActivity
+import deckers.thibault.aves.MainActivity.Companion.EXTRA_KEY_EXPLORER_PATH
 import deckers.thibault.aves.MainActivity.Companion.EXTRA_KEY_FILTERS_ARRAY
 import deckers.thibault.aves.MainActivity.Companion.EXTRA_KEY_FILTERS_STRING
 import deckers.thibault.aves.MainActivity.Companion.EXTRA_KEY_PAGE
@@ -41,7 +46,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.util.*
+import java.util.Locale
+import java.util.UUID
 import kotlin.math.roundToInt
 
 class AppAdapterHandler(private val context: Context) : MethodCallHandler {
@@ -351,8 +357,9 @@ class AppAdapterHandler(private val context: Context) : MethodCallHandler {
         val label = call.argument<String>("label")
         val iconBytes = call.argument<ByteArray>("iconBytes")
         val filters = call.argument<List<String>>("filters")
+        val explorerPath = call.argument<String>("explorerPath")
         val uri = call.argument<String>("uri")?.let { Uri.parse(it) }
-        if (label == null || (filters == null && uri == null)) {
+        if (label == null) {
             result.error("pin-args", "missing arguments", null)
             return
         }
@@ -380,7 +387,6 @@ class AppAdapterHandler(private val context: Context) : MethodCallHandler {
         }
 
         val intent = when {
-            uri != null -> Intent(Intent.ACTION_VIEW, uri, context, MainActivity::class.java)
             filters != null -> Intent(Intent.ACTION_MAIN, null, context, MainActivity::class.java)
                 .putExtra(EXTRA_KEY_PAGE, "/collection")
                 .putExtra(EXTRA_KEY_FILTERS_ARRAY, filters.toTypedArray())
@@ -388,6 +394,11 @@ class AppAdapterHandler(private val context: Context) : MethodCallHandler {
                 // so we use a joined `String` as fallback
                 .putExtra(EXTRA_KEY_FILTERS_STRING, filters.joinToString(EXTRA_STRING_ARRAY_SEPARATOR))
 
+            explorerPath != null -> Intent(Intent.ACTION_MAIN, null, context, MainActivity::class.java)
+                .putExtra(EXTRA_KEY_PAGE, "/explorer")
+                .putExtra(EXTRA_KEY_EXPLORER_PATH, explorerPath)
+
+            uri != null -> Intent(Intent.ACTION_VIEW, uri, context, MainActivity::class.java)
             else -> {
                 result.error("pin-intent", "failed to build intent", null)
                 return

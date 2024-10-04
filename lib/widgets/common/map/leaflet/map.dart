@@ -198,6 +198,10 @@ class _EntryLeafletMapState<T> extends State<EntryLeafletMap<T>> with TickerProv
 
   Widget _buildMapLayer() {
     switch (widget.style) {
+      case EntryMapStyle.osmLiberty:
+        return const OsmLibertyLayer();
+      case EntryMapStyle.openTopoMap:
+        return const OpenTopoMapLayer();
       case EntryMapStyle.osmHot:
         return const OSMHotLayer();
       case EntryMapStyle.stamenWatercolor:
@@ -286,9 +290,8 @@ class _EntryLeafletMapState<T> extends State<EntryLeafletMap<T>> with TickerProv
     final animation = CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn);
     controller.addListener(() => animate(animation));
     animation.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        controller.dispose();
-      } else if (status == AnimationStatus.dismissed) {
+      if (!status.isAnimating) {
+        animation.dispose();
         controller.dispose();
       }
     });

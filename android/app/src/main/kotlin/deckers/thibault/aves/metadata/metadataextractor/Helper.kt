@@ -29,7 +29,6 @@ import deckers.thibault.aves.metadata.GeoTiffKeys
 import deckers.thibault.aves.metadata.Metadata
 import deckers.thibault.aves.metadata.metadataextractor.mpf.MpfReader
 import deckers.thibault.aves.utils.LogUtils
-import deckers.thibault.aves.utils.MemoryUtils
 import java.io.BufferedInputStream
 import java.io.IOException
 import java.io.InputStream
@@ -122,7 +121,6 @@ object Helper {
         val reader = RandomAccessStreamReader(input, RandomAccessStreamReader.DEFAULT_CHUNK_LENGTH, streamLength)
         val metadata = com.drew.metadata.Metadata()
         val handler = SafeExifTiffHandler(metadata, null, 0)
-        Log.d(LOG_TAG, "safeReadTiff: availableHeapSize=${MemoryUtils.getAvailableHeapSize()}")
         TiffReader().processTiff(reader, handler, 0)
         return metadata
     }

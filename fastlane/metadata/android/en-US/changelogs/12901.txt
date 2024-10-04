@@ -1,0 +1,3 @@
+In v1.11.10:
+- enjoy the app in Swedish
+Full changelog available on GitHub

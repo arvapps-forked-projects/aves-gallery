@@ -4,7 +4,6 @@ import 'package:aves/image_providers/thumbnail_provider.dart';
 import 'package:aves/model/entry/entry.dart';
 import 'package:aves/model/entry/extensions/images.dart';
 import 'package:aves/model/entry/extensions/props.dart';
-import 'package:aves/model/settings/enums/accessibility_animations.dart';
 import 'package:aves/model/settings/enums/entry_background.dart';
 import 'package:aves/model/settings/settings.dart';
 import 'package:aves/services/common/services.dart';
@@ -26,6 +25,7 @@ class ThumbnailImage extends StatefulWidget {
   final bool showLoadingBackground;
   final ValueNotifier<bool>? cancellableNotifier;
   final Object? heroTag;
+  final HeroPlaceholderBuilder? heroPlaceholderBuilder;
 
   const ThumbnailImage({
     super.key,
@@ -38,6 +38,7 @@ class ThumbnailImage extends StatefulWidget {
     this.showLoadingBackground = true,
     this.cancellableNotifier,
     this.heroTag,
+    this.heroPlaceholderBuilder,
   });
 
   @override
@@ -190,7 +191,7 @@ class _ThumbnailImageState extends State<ThumbnailImage> {
 
   @override
   Widget build(BuildContext context) {
-    final animate = context.select<Settings, bool>((v) => v.accessibilityAnimations.animate);
+    final animate = context.select<Settings, bool>((v) => v.animate);
     if (!entry.canDecode || _lastException != null) {
       return _buildError(context, animate);
     }
@@ -262,11 +263,12 @@ class _ThumbnailImageState extends State<ThumbnailImage> {
             },
           );
 
-    if (animate && widget.heroTag != null) {
+    final heroTag = widget.heroTag;
+    if (animate && heroTag != null) {
       final background = settings.imageBackground;
       final backgroundColor = background.isColor ? background.color : null;
       image = Hero(
-        tag: widget.heroTag!,
+        tag: heroTag,
         flightShuttleBuilder: (flight, animation, direction, fromHero, toHero) {
           Widget child = TransitionImage(
             image: entry.bestCachedThumbnail,
@@ -283,6 +285,7 @@ class _ThumbnailImageState extends State<ThumbnailImage> {
           }
           return child;
         },
+        placeholderBuilder: widget.heroPlaceholderBuilder,
         transitionOnUserGestures: true,
         child: image,
       );
@@ -297,9 +300,10 @@ class _ThumbnailImageState extends State<ThumbnailImage> {
       extent: extent,
     );
 
-    if (animate && widget.heroTag != null) {
+    final heroTag = widget.heroTag;
+    if (animate && heroTag != null) {
       child = Hero(
-        tag: widget.heroTag!,
+        tag: heroTag,
         flightShuttleBuilder: (flight, animation, direction, fromHero, toHero) {
           return MediaQueryDataProvider(
             child: DefaultTextStyle(

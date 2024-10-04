@@ -90,6 +90,7 @@
   "chipActionGoToCountryPage": "Show in Countries",
   "chipActionGoToPlacePage": "Show in Places",
   "chipActionGoToTagPage": "Show in Tags",
+  "chipActionGoToExplorerPage": "Show in Explorer",
   "chipActionFilterOut": "Filter out",
   "chipActionFilterIn": "Filter in",
   "chipActionHide": "Hide",
@@ -237,8 +238,8 @@
   "mapStyleGoogleNormal": "Google Maps",
   "mapStyleGoogleHybrid": "Google Maps (Hybrid)",
   "mapStyleGoogleTerrain": "Google Maps (Terrain)",
-  "mapStyleHuaweiNormal": "Petal Maps",
-  "mapStyleHuaweiTerrain": "Petal Maps (Terrain)",
+  "mapStyleOsmLiberty": "OSM Liberty",
+  "mapStyleOpenTopoMap": "OpenTopoMap",
   "mapStyleOsmHot": "Humanitarian OSM",
   "mapStyleStamenWatercolor": "Stamen Watercolor",
 
@@ -724,6 +725,7 @@
   "sortBySize": "By size",
   "sortByAlbumFileName": "By album & file name",
   "sortByRating": "By rating",
+  "sortByDuration": "By duration",
 
   "sortOrderNewestFirst": "Newest first",
   "sortOrderOldestFirst": "Oldest first",
@@ -733,6 +735,8 @@
   "sortOrderLowestFirst": "Lowest first",
   "sortOrderLargestFirst": "Largest first",
   "sortOrderSmallestFirst": "Smallest first",
+  "sortOrderShortestFirst": "Shortest first",
+  "sortOrderLongestFirst": "Longest first",
 
   "albumGroupTier": "By tier",
   "albumGroupType": "By type",
@@ -771,6 +775,11 @@
 
   "binPageTitle": "Recycle Bin",
 
+  "explorerPageTitle": "Explorer",
+  "explorerActionSelectStorageVolume": "Select storage",
+
+  "selectStorageVolumeDialogTitle": "Select Storage",
+
   "searchCollectionFieldHint": "Search collection",
   "searchRecentSectionTitle": "Recent",
   "searchDateSectionTitle": "Date",
@@ -803,7 +812,7 @@
   "settingsNavigationSectionTitle": "Navigation",
   "settingsHomeTile": "Home",
   "settingsHomeDialogTitle": "Home",
-  "setHomeCustomCollection": "Custom collection",
+  "setHomeCustom": "Custom",
   "settingsShowBottomNavigationBar": "Show bottom navigation bar",
   "settingsKeepScreenOnTile": "Keep screen on",
   "settingsKeepScreenOnDialogTitle": "Keep Screen On",
@@ -937,13 +946,8 @@
   "settingsHiddenItemsTile": "Hidden items",
   "settingsHiddenItemsPageTitle": "Hidden Items",
 
-  "settingsHiddenItemsTabFilters": "Hidden Filters",
   "settingsHiddenFiltersBanner": "Photos and videos matching hidden filters will not appear in your collection.",
   "settingsHiddenFiltersEmpty": "No hidden filters",
-
-  "settingsHiddenItemsTabPaths": "Hidden Paths",
-  "settingsHiddenPathsBanner": "Photos and videos in these folders, or any of their subfolders, will not appear in your collection.",
-  "addPathTooltip": "Add path",
 
   "settingsStorageAccessTile": "Storage access",
   "settingsStorageAccessPageTitle": "Storage Access",
@@ -1025,6 +1029,8 @@
   "mapZoomInTooltip": "Zoom in",
   "mapZoomOutTooltip": "Zoom out",
   "mapPointNorthUpTooltip": "Point north up",
+  "mapAttributionOsmLiberty": "Map data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors • Tiles by [OpenMapTiles](https://www.openmaptiles.org/), [CC BY](http://creativecommons.org/licenses/by/4.0) • Hosted by [OSM Americana](https://tile.ourmap.us)",
+  "mapAttributionOpenTopoMap": "Map data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors • [SRTM](https://www.earthdata.nasa.gov/sensors/srtm) | Tiles by [OpenTopoMap](https://opentopomap.org/), [CC BY-SA](https://creativecommons.org/licenses/by-sa/3.0/)",
   "mapAttributionOsmHot": "Map data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors • Tiles by [HOT](https://www.hotosm.org/) • Hosted by [OSM France](https://openstreetmap.fr/)",
   "mapAttributionStamen": "Map data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors • Tiles by [Stamen Design](https://stamen.com), [CC BY 3.0](https://creativecommons.org/licenses/by/3.0)",
   "openMapPageTooltip": "View on Map page",

@@ -62,7 +62,7 @@ class _FilePickerPageState extends State<FilePickerPage> {
     final animations = context.select<Settings, AccessibilityAnimations>((s) => s.accessibilityAnimations);
     return PopScope(
       canPop: _directory.relativeDir.isEmpty,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
 
         final parent = pContext.dirname(currentDirectoryPath);
@@ -101,16 +101,7 @@ class _FilePickerPageState extends State<FilePickerPage> {
         body: SafeArea(
           child: Column(
             children: [
-              SizedBox(
-                height: kMinInteractiveDimension,
-                child: CrumbLine(
-                  directory: _directory,
-                  onTap: (path) {
-                    _goTo(path);
-                    setState(() {});
-                  },
-                ),
-              ),
+              _buildCrumbLine(context),
               const Divider(height: 0),
               Expanded(
                 child: visibleContents == null
@@ -144,6 +135,26 @@ class _FilePickerPageState extends State<FilePickerPage> {
     );
   }
 
+  Widget _buildCrumbLine(BuildContext context) {
+    final crumbStyle = Theme.of(context).textTheme.bodyMedium!;
+    return SizedBox(
+      height: kMinInteractiveDimension,
+      child: DefaultTextStyle(
+        style: crumbStyle.copyWith(
+          color: crumbStyle.color!.withOpacity(.4),
+          fontWeight: FontWeight.w500,
+        ),
+        child: CrumbLine(
+          directory: _directory,
+          onTap: (path) {
+            _goTo(path);
+            setState(() {});
+          },
+        ),
+      ),
+    );
+  }
+
   String _getTitle(BuildContext context) {
     if (_directory.relativeDir.isEmpty) {
       return _directory.getVolumeDescription(context);
@@ -165,13 +176,13 @@ class _FilePickerPageState extends State<FilePickerPage> {
             ),
           ),
           ...volumes.map((v) {
-            final icon = v.isRemovable ? AIcons.removableStorage : AIcons.mainStorage;
+            final icon = v.isRemovable ? AIcons.storageCard : AIcons.storageMain;
             return ListTile(
               leading: Icon(icon),
               title: Text(v.getDescription(context)),
               onTap: () async {
                 Navigator.maybeOf(context)?.pop();
-                await Future.delayed(ADurations.drawerTransitionAnimation);
+                await Future.delayed(ADurations.drawerTransitionLoose);
                 _goTo(v.path);
                 setState(() {});
               },

@@ -169,19 +169,6 @@ class Dependencies {
     ),
   ];
 
-  static const List<Dependency> _huaweiMobileServices = [
-    Dependency(
-      name: 'Huawei Mobile Services (Availability, Map)',
-      license: apache2,
-      licenseUrl: 'https://github.com/HMS-Core/hms-flutter-plugin/blob/master/LICENCE',
-      sourceUrl: 'https://github.com/HMS-Core/hms-flutter-plugin',
-    ),
-  ];
-
-  static const List<Dependency> _flutterPluginsHuaweiOnly = [
-    ..._huaweiMobileServices,
-  ];
-
   static const List<Dependency> _flutterPluginsIzzyOnly = [
     ..._googleMobileServices,
   ];
@@ -199,7 +186,6 @@ class Dependencies {
 
   static List<Dependency> flutterPlugins(AppFlavor flavor) => [
         ..._flutterPluginsCommon,
-        if (flavor == AppFlavor.huawei) ..._flutterPluginsHuaweiOnly,
         if (flavor == AppFlavor.izzy) ..._flutterPluginsIzzyOnly,
         if (flavor == AppFlavor.libre) ..._flutterPluginsLibreOnly,
         if (flavor == AppFlavor.play) ..._flutterPluginsPlayOnly,
@@ -298,6 +284,16 @@ class Dependencies {
       license: mit,
       sourceUrl: 'https://github.com/Milad-Akarie/smooth_page_indicator',
     ),
+    Dependency(
+      name: 'Vector Map Tiles',
+      license: bsd3,
+      sourceUrl: 'https://github.com/greensopinion/flutter-vector-map-tiles',
+    ),
+    Dependency(
+      name: 'Vector Tile Renderer',
+      license: bsd3,
+      sourceUrl: 'https://github.com/greensopinion/dart-vector-tile-renderer',
+    ),
   ];
 
   static const List<Dependency> dartPackages = [
@@ -343,6 +339,11 @@ class Dependencies {
       sourceUrl: 'https://github.com/fluttercommunity/get_it',
     ),
     Dependency(
+      name: 'HTTP',
+      license: bsd3,
+      sourceUrl: 'https://github.com/dart-lang/http',
+    ),
+    Dependency(
       name: 'Intl',
       license: bsd3,
       sourceUrl: 'https://github.com/dart-lang/intl',
@@ -351,12 +352,6 @@ class Dependencies {
       name: 'LatLong2',
       license: apache2,
       sourceUrl: 'https://github.com/jifalops/dart-latlong',
-    ),
-    Dependency(
-      name: 'Material Color Utilities',
-      license: apache2,
-      licenseUrl: 'https://github.com/material-foundation/material-color-utilities/tree/main/dart/LICENSE',
-      sourceUrl: 'https://github.com/material-foundation/material-color-utilities/tree/main/dart',
     ),
     Dependency(
       name: 'Memory Leak Tracker',

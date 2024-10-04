@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:aves/model/apps.dart';
+import 'package:aves/model/app_inventory.dart';
 import 'package:aves/model/covers.dart';
 import 'package:aves/model/filters/album.dart';
 import 'package:aves/model/filters/filters.dart';
@@ -27,7 +27,7 @@ class CoveredFilterChip<T extends CollectionFilter> extends StatelessWidget {
   final double extent, thumbnailExtent;
   final bool showText, pinned, locked;
   final String? banner;
-  final FilterCallback? onTap;
+  final AFilterCallback? onTap;
   final HeroType heroType;
 
   const CoveredFilterChip({
@@ -115,8 +115,9 @@ class CoveredFilterChip<T extends CollectionFilter> extends StatelessWidget {
     return AvesFilterChip(
       key: chipKey,
       filter: _filter,
+      showLeading: showText,
       showText: showText,
-      showGenericIcon: false,
+      allowGenericIcon: false,
       decoration: AvesFilterDecoration(
         radius: radius(extent),
         widget: Padding(
@@ -194,7 +195,7 @@ class CoveredFilterChip<T extends CollectionFilter> extends StatelessWidget {
             padding: EdgeInsetsDirectional.only(end: padding),
             duration: ADurations.chipDecorationAnimation,
             child: Icon(
-              AIcons.removableStorage,
+              AIcons.storageCard,
               color: _detailColor(context),
               size: iconSize,
             ),

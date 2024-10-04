@@ -61,13 +61,13 @@ class _VideoProgressBarState extends State<VideoProgressBar> {
           },
           onHorizontalDragStart: (details) {
             _playingOnDragStart = isPlaying;
-            if (_playingOnDragStart) controller!.pause();
+            if (_playingOnDragStart) controller?.pause();
           },
           onHorizontalDragUpdate: (details) {
             _seekFromTap(details.globalPosition);
           },
           onHorizontalDragEnd: (details) {
-            if (_playingOnDragStart) controller!.play();
+            if (_playingOnDragStart) controller?.play();
           },
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: kMinInteractiveDimension),
@@ -222,6 +222,6 @@ class _VideoProgressBarState extends State<VideoProgressBar> {
 
   double? _progressToDx(double progress) {
     final box = _getProgressBarRenderBox();
-    return box == null ? null : progress * box.size.width;
+    return box != null && box.hasSize ? progress * box.size.width : null;
   }
 }

@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:aves/model/apps.dart';
+import 'package:aves/model/app_inventory.dart';
 import 'package:aves/model/entry/entry.dart';
 import 'package:aves/model/entry/extensions/props.dart';
 import 'package:aves/model/filters/filters.dart';
@@ -30,7 +30,7 @@ abstract class AppService {
 
   Future<bool> shareSingle(String uri, String mimeType);
 
-  Future<void> pinToHomeScreen(String label, AvesEntry? coverEntry, {Set<CollectionFilter>? filters, String? uri});
+  Future<void> pinToHomeScreen(String label, AvesEntry? coverEntry, {Set<CollectionFilter>? filters, String? explorerPath, String? uri});
 }
 
 class PlatformAppService implements AppService {
@@ -43,7 +43,7 @@ class PlatformAppService implements AppService {
     'com.sony.playmemories.mobile': {'Imaging Edge Mobile'},
     'nekox.messenger': {'NekoX'},
     'org.telegram.messenger': {'Telegram Images', 'Telegram Video'},
-    'com.whatsapp': {'Whatsapp', 'WhatsApp Animated Gifs', 'WhatsApp Documents', 'WhatsApp Images', 'WhatsApp Video'}
+    'com.whatsapp': {'WhatsApp Animated Gifs', 'WhatsApp Documents', 'WhatsApp Images', 'WhatsApp Video'}
   };
 
   @override
@@ -203,7 +203,7 @@ class PlatformAppService implements AppService {
   // app shortcuts
 
   @override
-  Future<void> pinToHomeScreen(String label, AvesEntry? coverEntry, {Set<CollectionFilter>? filters, String? uri}) async {
+  Future<void> pinToHomeScreen(String label, AvesEntry? coverEntry, {Set<CollectionFilter>? filters, String? explorerPath, String? uri}) async {
     Uint8List? iconBytes;
     if (coverEntry != null) {
       final size = coverEntry.isVideo ? 0.0 : 256.0;
@@ -222,6 +222,7 @@ class PlatformAppService implements AppService {
         'label': label,
         'iconBytes': iconBytes,
         'filters': filters?.map((filter) => filter.toJson()).toList(),
+        'explorerPath': explorerPath,
         'uri': uri,
       });
     } on PlatformException catch (e, stack) {

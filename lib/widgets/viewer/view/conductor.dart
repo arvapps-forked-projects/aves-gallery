@@ -1,5 +1,5 @@
 import 'package:aves/model/entry/entry.dart';
-import 'package:aves/model/view_state.dart';
+import 'package:aves/model/viewer/view_state.dart';
 import 'package:aves/widgets/viewer/view/controller.dart';
 import 'package:aves_magnifier/aves_magnifier.dart';
 import 'package:collection/collection.dart';
@@ -71,7 +71,7 @@ class ViewStateConductor {
   void reset(AvesEntry entry) {
     final uris = <AvesEntry>{
       entry,
-      ...?entry.burstEntries,
+      ...?entry.stackedEntries,
     }.map((v) => v.uri).toSet();
     final entryControllers = _controllers.where((v) => uris.contains(v.entry.uri)).toSet();
     entryControllers.forEach((controller) {

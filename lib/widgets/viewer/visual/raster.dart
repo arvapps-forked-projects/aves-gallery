@@ -6,7 +6,7 @@ import 'package:aves/model/entry/extensions/images.dart';
 import 'package:aves/model/entry/extensions/props.dart';
 import 'package:aves/model/settings/enums/entry_background.dart';
 import 'package:aves/model/settings/settings.dart';
-import 'package:aves/model/view_state.dart';
+import 'package:aves/model/viewer/view_state.dart';
 import 'package:aves/widgets/common/fx/checkered_decoration.dart';
 import 'package:aves/widgets/viewer/controls/notifications.dart';
 import 'package:aves/widgets/viewer/visual/entry_page_view.dart';
@@ -41,6 +41,7 @@ class _RasterImageViewState extends State<RasterImageView> {
   ImageStream? _fullImageStream;
   late ImageStreamListener _fullImageListener;
   final ValueNotifier<bool> _fullImageLoaded = ValueNotifier(false);
+  ImageInfo? _fullImageInfo;
 
   AvesEntry get entry => widget.entry;
 
@@ -101,10 +102,13 @@ class _RasterImageViewState extends State<RasterImageView> {
   void _unregisterFullImage() {
     _fullImageStream?.removeListener(_fullImageListener);
     _fullImageStream = null;
+    _fullImageInfo?.dispose();
   }
 
   void _onFullImageCompleted(ImageInfo image, bool synchronousCall) {
+    // implementer is responsible for disposing the provided `ImageInfo`
     _unregisterFullImage();
+    _fullImageInfo = image;
     _fullImageLoaded.value = true;
     FullImageLoadedNotification(entry, fullImageProvider).dispatch(context);
   }

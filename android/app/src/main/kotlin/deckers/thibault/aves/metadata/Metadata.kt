@@ -2,7 +2,7 @@ package deckers.thibault.aves.metadata
 
 import android.content.Context
 import android.net.Uri
-import androidx.exifinterface.media.ExifInterface
+import androidx.exifinterface.media.ExifInterfaceFork as ExifInterface
 import deckers.thibault.aves.utils.FileUtils.transferFrom
 import deckers.thibault.aves.utils.MimeTypes
 import deckers.thibault.aves.utils.StorageUtils
@@ -134,32 +134,24 @@ object Metadata {
     private val previewFiles = HashMap<Uri, File>()
 
     private fun getSafeUri(context: Context, uri: Uri, mimeType: String, sizeBytes: Long?): Uri {
-        return when (mimeType) {
-            // formats known to yield OOM for large files
-            MimeTypes.DNG,
-            MimeTypes.DNG_ADOBE,
-            MimeTypes.HEIC,
-            MimeTypes.HEIF,
-            MimeTypes.MP4,
-            MimeTypes.PSD_VND,
-            MimeTypes.PSD_X,
-            MimeTypes.TIFF -> {
-                if (isDangerouslyLarge(sizeBytes)) {
-                    // make a preview from the beginning of the file,
-                    // hoping the metadata is accessible in the copied chunk
-                    var previewFile = previewFiles[uri]
-                    if (previewFile == null) {
-                        previewFile = createPreviewFile(context, uri)
-                        previewFiles[uri] = previewFile
-                    }
-                    Uri.fromFile(previewFile)
-                } else {
-                    // small enough to be safe as it is
-                    uri
+        // formats known to yield OOM for large files
+        return if ((MimeTypes.isImage(mimeType) || mimeType == MimeTypes.MP4)) {
+            if (isDangerouslyLarge(sizeBytes)) {
+                // make a preview from the beginning of the file,
+                // hoping the metadata is accessible in the copied chunk
+                var previewFile = previewFiles[uri]
+                if (previewFile == null) {
+                    previewFile = createPreviewFile(context, uri)
+                    previewFiles[uri] = previewFile
                 }
+                Uri.fromFile(previewFile)
+            } else {
+                // small enough to be safe as it is
+                uri
             }
+        } else {
             // *probably* safe
-            else -> uri
+            uri
         }
     }
 

@@ -5,13 +5,14 @@ import 'package:aves/model/entry/entry.dart';
 import 'package:aves/model/entry/extensions/location.dart';
 import 'package:aves/model/filters/coordinate.dart';
 import 'package:aves/model/filters/filters.dart';
-import 'package:aves/model/geotiff.dart';
+import 'package:aves/model/media/geotiff.dart';
 import 'package:aves/model/highlight.dart';
 import 'package:aves/model/settings/enums/accessibility_animations.dart';
 import 'package:aves/model/settings/enums/map_style.dart';
 import 'package:aves/model/settings/settings.dart';
 import 'package:aves/model/source/collection_lens.dart';
 import 'package:aves/model/source/tag.dart';
+import 'package:aves/services/common/services.dart';
 import 'package:aves/theme/durations.dart';
 import 'package:aves/theme/icons.dart';
 import 'package:aves/view/view.dart';
@@ -28,6 +29,7 @@ import 'package:aves/widgets/common/map/geo_map.dart';
 import 'package:aves/widgets/common/map/map_action_delegate.dart';
 import 'package:aves/widgets/common/providers/highlight_info_provider.dart';
 import 'package:aves/widgets/common/providers/map_theme_provider.dart';
+import 'package:aves/widgets/dialogs/aves_dialog.dart';
 import 'package:aves/widgets/filter_grids/common/action_delegates/chip.dart';
 import 'package:aves/widgets/map/scroller.dart';
 import 'package:aves/widgets/viewer/controls/notifications.dart';
@@ -41,15 +43,19 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 class MapPage extends StatelessWidget {
-  static const routeName = '/collection/map';
+  static const routeName = '/map';
 
   final CollectionLens collection;
+  final LatLng? initialLocation;
+  final double? initialZoom;
   final AvesEntry? initialEntry;
   final MappedGeoTiff? overlayEntry;
 
   const MapPage({
     super.key,
     required this.collection,
+    this.initialLocation,
+    this.initialZoom,
     this.initialEntry,
     this.overlayEntry,
   });
@@ -68,6 +74,8 @@ class MapPage extends StatelessWidget {
           bottom: true,
           child: _Content(
             collection: collection,
+            initialLocation: initialLocation,
+            initialZoom: initialZoom,
             initialEntry: initialEntry,
             overlayEntry: overlayEntry,
           ),
@@ -79,11 +87,15 @@ class MapPage extends StatelessWidget {
 
 class _Content extends StatefulWidget {
   final CollectionLens collection;
+  final LatLng? initialLocation;
+  final double? initialZoom;
   final AvesEntry? initialEntry;
   final MappedGeoTiff? overlayEntry;
 
   const _Content({
     required this.collection,
+    this.initialLocation,
+    this.initialZoom,
     this.initialEntry,
     this.overlayEntry,
   });
@@ -103,7 +115,7 @@ class _ContentState extends State<_Content> with SingleTickerProviderStateMixin 
   final ValueNotifier<double> _overlayOpacityNotifier = ValueNotifier(1);
   final ValueNotifier<bool> _overlayVisible = ValueNotifier(true);
   late AnimationController _overlayAnimationController;
-  late Animation<double> _overlayScale, _scrollerSize;
+  late CurvedAnimation _overlayScale, _scrollerSize;
   CoordinateFilter? _regionFilter;
 
   CollectionLens? get regionCollection => _regionCollectionNotifier.value;
@@ -116,7 +128,7 @@ class _ContentState extends State<_Content> with SingleTickerProviderStateMixin 
 
     if (ExtraEntryMapStyle.isHeavy(settings.mapStyle)) {
       _isPageAnimatingNotifier.value = true;
-      Future.delayed(ADurations.pageTransitionAnimation * timeDilation).then((_) {
+      Future.delayed(ADurations.pageTransitionLoose * timeDilation).then((_) {
         if (!mounted) return;
         _isPageAnimatingNotifier.value = false;
       });
@@ -140,7 +152,7 @@ class _ContentState extends State<_Content> with SingleTickerProviderStateMixin 
     _subscriptions.add(openingCollection.source.eventBus.on<CatalogMetadataChangedEvent>().listen((e) => _updateRegionCollection()));
 
     _selectedIndexNotifier.addListener(_onThumbnailIndexChanged);
-    Future.delayed(ADurations.pageTransitionAnimation * timeDilation + const Duration(seconds: 1), () {
+    Future.delayed(ADurations.pageTransitionLoose * timeDilation + const Duration(seconds: 1), () {
       final regionEntries = regionCollection?.sortedEntries ?? [];
       final initialEntry = widget.initialEntry ?? regionEntries.firstOrNull;
       if (initialEntry != null) {
@@ -170,6 +182,8 @@ class _ContentState extends State<_Content> with SingleTickerProviderStateMixin 
     _dotEntryNotifier.dispose();
     _overlayOpacityNotifier.dispose();
     _overlayVisible.dispose();
+    _overlayScale.dispose();
+    _scrollerSize.dispose();
     _overlayAnimationController.dispose();
 
     // provided collection should be a new instance specifically created
@@ -186,6 +200,8 @@ class _ContentState extends State<_Content> with SingleTickerProviderStateMixin 
           _goToCollection(notification.filter);
         } else if (notification is FilterNotification) {
           _goToCollection(notification.filter);
+        } else if (notification is OpenMapAppNotification) {
+          _openMapApp();
         } else {
           return false;
         }
@@ -246,10 +262,11 @@ class _ContentState extends State<_Content> with SingleTickerProviderStateMixin 
   }
 
   Widget _buildMap() {
+    final canPop = Navigator.maybeOf(context)?.canPop() == true;
     Widget child = MapTheme(
       interactive: true,
       showCoordinateFilter: true,
-      navigationButton: MapNavigationButton.back,
+      navigationButton: canPop ? MapNavigationButton.back : MapNavigationButton.close,
       scale: _overlayScale,
       child: GeoMap(
         // key is expected by test driver
@@ -258,7 +275,8 @@ class _ContentState extends State<_Content> with SingleTickerProviderStateMixin 
         collectionListenable: openingCollection,
         entries: openingCollection.sortedEntries,
         availableSize: MediaQuery.sizeOf(context),
-        initialCenter: widget.initialEntry?.latLng ?? widget.overlayEntry?.center,
+        initialCenter: widget.initialLocation ?? widget.initialEntry?.latLng ?? widget.overlayEntry?.center,
+        initialZoom: widget.initialZoom,
         isAnimatingNotifier: _isPageAnimatingNotifier,
         dotLocationNotifier: _dotLocationNotifier,
         overlayOpacityNotifier: _overlayOpacityNotifier,
@@ -430,6 +448,15 @@ class _ContentState extends State<_Content> with SingleTickerProviderStateMixin 
       ),
       (route) => false,
     );
+  }
+
+  Future<void> _openMapApp() async {
+    final latLng = _dotEntryNotifier.value?.latLng ?? _mapController.idleBounds?.projectedCenter;
+    if (latLng != null) {
+      await appService.openMap(latLng).then((success) {
+        if (!success) showNoMatchingAppDialog(context);
+      });
+    }
   }
 
   // overlay

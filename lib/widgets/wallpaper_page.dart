@@ -71,7 +71,7 @@ class EntryEditor extends StatefulWidget {
 class _EntryEditorState extends State<EntryEditor> with EntryViewControllerMixin, SingleTickerProviderStateMixin {
   final ValueNotifier<bool> _overlayVisible = ValueNotifier(true);
   late AnimationController _overlayAnimationController;
-  late Animation<double> _overlayVideoControlScale;
+  late CurvedAnimation _overlayVideoControlScale;
   EdgeInsets? _frozenViewInsets, _frozenViewPadding;
   late VideoActionDelegate _videoActionDelegate;
   late final ViewerController _viewerController;
@@ -120,6 +120,7 @@ class _EntryEditorState extends State<EntryEditor> with EntryViewControllerMixin
   void dispose() {
     cleanEntryControllers(entry);
     _overlayVisible.dispose();
+    _overlayVideoControlScale.dispose();
     _overlayAnimationController.dispose();
     _videoActionDelegate.dispose();
     _viewerController.dispose();
@@ -186,13 +187,6 @@ class _EntryEditorState extends State<EntryEditor> with EntryViewControllerMixin
               controller: videoController,
               action: action,
             ),
-            onActionMenuOpened: () {
-              // if the menu is opened while overlay is hiding,
-              // the popup menu button is disposed and menu items are ineffective,
-              // so we make sure overlay stays visible
-              _videoActionDelegate.stopOverlayHidingTimer();
-              const ToggleOverlayNotification(visible: true).dispatch(context);
-            },
           ),
         );
       }

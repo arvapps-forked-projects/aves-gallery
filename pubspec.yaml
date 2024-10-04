@@ -7,14 +7,14 @@ repository: https://github.com/deckerst/aves
 # - play changelog:   /whatsnew/whatsnew-en-US
 # - izzy changelog:   /fastlane/metadata/android/en-US/changelogs/XXX01.txt
 # - libre changelog:  /fastlane/metadata/android/en-US/changelogs/XXX.txt
-version: 1.11.1+120
+version: 1.11.13+132
 publish_to: none
 
 environment:
   # this project bundles Flutter SDK via `flutter_wrapper`
   # cf https://github.com/passsy/flutter_wrapper
-  flutter: 3.22.2
-  sdk: '>=3.4.1 <4.0.0'
+  flutter: 3.24.3
+  sdk: '>=3.5.0 <4.0.0'
 
 # use `scripts/apply_flavor_{flavor}.sh` to set the right dependencies for the flavor
 dependencies:
@@ -78,11 +78,11 @@ dependencies:
   flutter_markdown:
   flutter_staggered_animations:
   get_it:
+  http:
   intl:
   latlong2:
   leak_tracker:
   local_auth:
-  material_color_utilities:
   material_design_icons_flutter:
   network_info_plus:
   overlay_support:
@@ -112,7 +112,9 @@ dependencies:
       url: https://github.com/deckerst/aves_streams_channel.git
   transparent_image:
   url_launcher:
+  vector_map_tiles:
   vector_math:
+  vector_tile_renderer:
   volume_controller:
   xml:
 
@@ -176,7 +178,7 @@ flutter:
 #  and `_PackageLicensePage` in `/material/about.dart`
 #
 #  `OverlaySnackBar` in `/widgets/common/action_mixins/overlay_snack_bar.dart`
-#  adapts from Flutter v3.16.0 `SnackBar` in `/material/snack_bar.dart`
+#  adapts from Flutter v3.23.0 `SnackBar` in `/material/snack_bar.dart`
 #
 #  `EagerScaleGestureRecognizer` in `/widgets/common/behaviour/eager_scale_gesture_recognizer.dart`
 #  adapts from Flutter v3.16.0 `ScaleGestureRecognizer` in `/gestures/scale.dart`

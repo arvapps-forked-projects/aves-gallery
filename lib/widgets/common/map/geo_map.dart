@@ -36,6 +36,7 @@ class GeoMap extends StatefulWidget {
   final List<AvesEntry> entries;
   final Size availableSize;
   final LatLng? initialCenter;
+  final double? initialZoom;
   final ValueNotifier<bool> isAnimatingNotifier;
   final ValueNotifier<LatLng?>? dotLocationNotifier;
   final ValueNotifier<double>? overlayOpacityNotifier;
@@ -62,6 +63,7 @@ class GeoMap extends StatefulWidget {
     required this.entries,
     required this.availableSize,
     this.initialCenter,
+    this.initialZoom,
     required this.isAnimatingNotifier,
     this.dotLocationNotifier,
     this.overlayOpacityNotifier,
@@ -167,8 +169,6 @@ class _GeoMapState extends State<GeoMap> {
             case EntryMapStyle.googleNormal:
             case EntryMapStyle.googleHybrid:
             case EntryMapStyle.googleTerrain:
-            case EntryMapStyle.hmsNormal:
-            case EntryMapStyle.hmsTerrain:
               child = mobileServices.buildMap<AvesEntry>(
                 controller: controller,
                 clusterListenable: _clusterChangeNotifier,
@@ -187,6 +187,8 @@ class _GeoMapState extends State<GeoMap> {
                 onMarkerTap: _onMarkerTap,
                 onMarkerLongPress: onMarkerLongPress,
               );
+            case EntryMapStyle.osmLiberty:
+            case EntryMapStyle.openTopoMap:
             case EntryMapStyle.osmHot:
             case EntryMapStyle.stamenWatercolor:
               child = EntryLeafletMap<AvesEntry>(
@@ -313,6 +315,8 @@ class _GeoMapState extends State<GeoMap> {
         );
       }
     }
+
+    final initialZoom = widget.initialZoom ?? settings.infoMapZoom;
     if (bounds == null) {
       LatLng? centerToSave;
       final initialCenter = widget.initialCenter;
@@ -320,7 +324,7 @@ class _GeoMapState extends State<GeoMap> {
         // fit map for specified center and user zoom
         bounds = ZoomedBounds.fromPoints(
           points: {initialCenter},
-          collocationZoom: settings.infoMapZoom,
+          collocationZoom: initialZoom,
         );
         centerToSave = initialCenter;
       } else {
@@ -345,7 +349,7 @@ class _GeoMapState extends State<GeoMap> {
       }
       bounds = ZoomedBounds.fromPoints(
         points: {center},
-        collocationZoom: settings.infoMapZoom,
+        collocationZoom: initialZoom,
       );
     }
 

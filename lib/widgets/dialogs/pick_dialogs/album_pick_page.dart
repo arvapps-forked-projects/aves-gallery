@@ -8,6 +8,7 @@ import 'package:aves/model/source/album.dart';
 import 'package:aves/model/source/collection_source.dart';
 import 'package:aves/model/vaults/details.dart';
 import 'package:aves/model/vaults/vaults.dart';
+import 'package:aves/services/common/services.dart';
 import 'package:aves/theme/durations.dart';
 import 'package:aves/theme/icons.dart';
 import 'package:aves/view/view.dart';
@@ -35,6 +36,7 @@ Future<String?> pickAlbum({
 }) async {
   final source = context.read<CollectionSource>();
   if (source.initState != SourceInitializationState.full) {
+    await reportService.log('Complete source initialization to pick album');
     // source may not be fully initialized in view mode
     await source.init();
   }
@@ -64,6 +66,7 @@ class _AlbumPickPage extends StatefulWidget {
 
 class _AlbumPickPageState extends State<_AlbumPickPage> {
   final ValueNotifier<double> _appBarHeightNotifier = ValueNotifier(0);
+  final ValueNotifier<AppMode> _appModeNotifier = ValueNotifier(AppMode.pickFilterInternal);
 
   CollectionSource get source => widget.source;
 
@@ -93,13 +96,14 @@ class _AlbumPickPageState extends State<_AlbumPickPage> {
   @override
   void dispose() {
     _appBarHeightNotifier.dispose();
+    _appModeNotifier.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return ListenableProvider<ValueNotifier<AppMode>>.value(
-      value: ValueNotifier(AppMode.pickFilterInternal),
+      value: _appModeNotifier,
       child: Selector<Settings, (AlbumChipGroupFactor, ChipSortFactor)>(
         selector: (context, s) => (s.albumGroupFactor, s.albumSortFactor),
         builder: (context, s, child) {
@@ -246,7 +250,7 @@ class _AlbumPickPageState extends State<_AlbumPickPage> {
     if (directory == null) return;
 
     // wait for the dialog to hide as applying the change may block the UI
-    await Future.delayed(ADurations.dialogTransitionAnimation * timeDilation);
+    await Future.delayed(ADurations.dialogTransitionLoose * timeDilation);
 
     _pickAlbum(directory);
   }
@@ -268,7 +272,7 @@ class _AlbumPickPageState extends State<_AlbumPickPage> {
     if (details == null) return;
 
     // wait for the dialog to hide as applying the change may block the UI
-    await Future.delayed(ADurations.dialogTransitionAnimation * timeDilation);
+    await Future.delayed(ADurations.dialogTransitionLoose * timeDilation);
 
     await vaults.create(details);
     _pickAlbum(details.path);

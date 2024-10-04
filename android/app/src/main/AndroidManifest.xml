@@ -14,10 +14,6 @@
         android:name="android.software.leanback"
         android:required="false" />
 
-    <!--
-    TODO TLAD [Android 14 (API 34)] request/handle READ_MEDIA_VISUAL_USER_SELECTED permission
-    cf https://developer.android.com/about/versions/14/changes/partial-photo-video-access
-    -->
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
@@ -35,11 +31,18 @@
 
     <!-- to access media with original metadata with scoped storage (API >=29) -->
     <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
-    <!-- to provide a foreground service type, as required by Android 14 (API 34) -->
-    <!-- TODO TLAD [Android 15 (API 35)] use `FOREGROUND_SERVICE_MEDIA_PROCESSING` -->
+    <!-- to provide a foreground service type, as required from Android 14 (API 34) -->
     <uses-permission
         android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"
+        android:maxSdkVersion="34"
         tools:ignore="SystemPermissionTypo" />
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROCESSING"
+        tools:ignore="SystemPermissionTypo" />
+    <!-- to switch between regular and work profiles -->
+    <uses-permission
+        android:name="android.permission.INTERACT_ACROSS_PROFILES"
+        tools:ignore="ProtectedPermissions" />
     <!-- TODO TLAD still needed to fetch map tiles / reverse geocoding / else ? check in release mode -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- from Android 12 (API 31), users can optionally grant access to the media management special permission -->
@@ -77,7 +80,7 @@
     -->
     <uses-sdk tools:overrideLibrary="com.arthenica.ffmpegkit.flutter" />
 
-    <!-- from Android 11, we should define <queries> to make other apps visible to this app -->
+    <!-- from Android 11 (API 30), we should define <queries> to make other apps visible to this app -->
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -93,7 +96,7 @@
             <data android:mimeType="video/*" />
         </intent>
         <!--
-        from Android 11, `url_launcher` method `canLaunchUrl()` will return false,
+        from Android 11 (API 30), `url_launcher` method `canLaunchUrl()` will return false,
         if appropriate intents are not declared, cf https://pub.dev/packages/url_launcher#configuration=
         -->
         <!-- to open https URLs -->
@@ -104,7 +107,7 @@
     </queries>
 
     <!--
-    as of Flutter v3.16.0, predictive back gesture does not work
+    as of Flutter v3.22.2, predictive back gesture does not work
     as expected when extending `FlutterFragmentActivity`
     so we disable `enableOnBackInvokedCallback`
     -->
@@ -142,6 +145,8 @@
                 <action android:name="android.intent.action.PICK" />
                 <action android:name="android.intent.action.SEND" />
                 <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.provider.action.REVIEW" />
+                <action android:name="android.provider.action.REVIEW_SECURE" />
                 <action android:name="com.android.camera.action.REVIEW" />
                 <action android:name="com.android.camera.action.SPLIT_SCREEN_REVIEW" />
 
@@ -161,6 +166,8 @@
                 <action android:name="android.intent.action.PICK" />
                 <action android:name="android.intent.action.SEND" />
                 <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.provider.action.REVIEW" />
+                <action android:name="android.provider.action.REVIEW_SECURE" />
                 <action android:name="com.android.camera.action.REVIEW" />
                 <action android:name="com.android.camera.action.SPLIT_SCREEN_REVIEW" />
 
@@ -175,6 +182,13 @@
 
                 <data android:scheme="content" />
                 <data android:scheme="file" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:scheme="geo" />
             </intent-filter>
             <!--
             <intent-filter>
@@ -256,11 +270,14 @@
             </intent-filter>
         </receiver>
 
-        <!-- anonymous service for analysis worker is specified here to provide service type -->
-        <!-- TODO TLAD [Android 15 (API 35)] use `mediaProcessing` -->
+        <!--
+        anonymous service for analysis worker is specified here to provide service type:
+        - `dataSync` for Android 14 (API 34)
+        - `mediaProcessing` from Android 15 (API 35)
+        -->
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
-            android:foregroundServiceType="dataSync"
+            android:foregroundServiceType="dataSync|mediaProcessing"
             tools:node="merge" />
 
         <service
@@ -309,9 +326,6 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="${googleApiKey}" />
         <meta-data
-            android:name="deckers.thibault.aves.huawei.API_KEY"
-            android:value="${huaweiApiKey}" />
-        <meta-data
             android:name="firebase_crashlytics_collection_enabled"
             android:value="false" />
         <!-- Don't delete the meta-data below.
@@ -319,8 +333,10 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <!-- as of Flutter v3.22.0 (stable),
-        Impeller fails to render videos (via `ffmpegkit`), and has random glitches -->
+        <!--
+        Impeller is not supported by `media_kit` v1.1.10+1:
+        https://github.com/media-kit/media-kit/issues/707
+        -->
         <meta-data
             android:name="io.flutter.embedding.android.EnableImpeller"
             android:value="false" />

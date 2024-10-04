@@ -6,7 +6,6 @@ import 'package:aves/model/filters/filters.dart';
 import 'package:aves/model/filters/location.dart';
 import 'package:aves/model/filters/rating.dart';
 import 'package:aves/model/filters/tag.dart';
-import 'package:aves/model/settings/enums/accessibility_animations.dart';
 import 'package:aves/model/settings/settings.dart';
 import 'package:aves/model/source/collection_lens.dart';
 import 'package:aves/model/source/collection_source.dart';
@@ -69,7 +68,7 @@ class _StatsPageState extends State<StatsPage> with FeedbackMixin, VaultAwareMix
     super.initState();
 
     _isPageAnimatingNotifier = ValueNotifier(true);
-    Future.delayed(ADurations.pageTransitionAnimation * timeDilation).then((_) {
+    Future.delayed(ADurations.pageTransitionLoose * timeDilation).then((_) {
       if (!mounted) return;
       _isPageAnimatingNotifier.value = false;
     });
@@ -365,7 +364,7 @@ class StatsTopPage extends StatelessWidget {
 
   final String title;
   final WidgetBuilder tableBuilder;
-  final FilterCallback onFilterSelection;
+  final AFilterCallback onFilterSelection;
 
   const StatsTopPage({
     super.key,
@@ -439,7 +438,7 @@ class _LocationIndicator extends StatelessWidget {
                       lineHeight: lineHeight,
                       backgroundColor: Themes.secondLayerColor(context),
                       progressColor: theme.colorScheme.primary,
-                      animation: context.select<Settings, bool>((v) => v.accessibilityAnimations.animate),
+                      animation: context.select<Settings, bool>((v) => v.animate),
                       isRTL: context.isRtl,
                       barRadius: barRadius,
                       padding: EdgeInsets.symmetric(horizontal: lineHeight),

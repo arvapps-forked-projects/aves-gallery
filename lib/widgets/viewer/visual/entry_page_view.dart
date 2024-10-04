@@ -3,9 +3,8 @@ import 'dart:async';
 import 'package:aves/app_mode.dart';
 import 'package:aves/model/entry/entry.dart';
 import 'package:aves/model/entry/extensions/props.dart';
-import 'package:aves/model/settings/enums/accessibility_animations.dart';
 import 'package:aves/model/settings/settings.dart';
-import 'package:aves/model/view_state.dart';
+import 'package:aves/model/viewer/view_state.dart';
 import 'package:aves/services/common/services.dart';
 import 'package:aves/services/media/media_session_service.dart';
 import 'package:aves/theme/icons.dart';
@@ -149,11 +148,11 @@ class _EntryPageViewState extends State<EntryPageView> with TickerProviderStateM
       );
     }
 
-    final animate = context.select<Settings, bool>((v) => v.accessibilityAnimations.animate);
+    final animate = context.select<Settings, bool>((v) => v.animate);
     if (animate) {
-      child = Consumer<HeroInfo?>(
+      child = Consumer<EntryHeroInfo?>(
         builder: (context, info, child) => Hero(
-          tag: info != null && info.entry == mainEntry ? Object.hashAll([info.collectionId, mainEntry.id]) : hashCode,
+          tag: info != null && info.entry == mainEntry ? info.tag : hashCode,
           transitionOnUserGestures: true,
           child: child!,
         ),
@@ -415,7 +414,11 @@ class _EntryPageViewState extends State<EntryPageView> with TickerProviderStateM
       onScaleUpdate: onScaleUpdate,
       onScaleEnd: onScaleEnd,
       onFling: _onFling,
-      onTap: (c, s, a, p) => _onTap(alignment: a),
+      onTap: (c, s, a, p) {
+        if (c.mounted) {
+          _onTap(alignment: a);
+        }
+      },
       onDoubleTap: onDoubleTap,
       child: child,
     );
@@ -505,7 +508,7 @@ class _EntryPageViewState extends State<EntryPageView> with TickerProviderStateM
   double? _getSideRatio() {
     if (!mounted) return null;
     final isPortrait = MediaQuery.orientationOf(context) == Orientation.portrait;
-    return isPortrait ? 1 / 5 : 1 / 8;
+    return isPortrait ? 1 / 6 : 1 / 8;
   }
 
   static ScaleState _vectorScaleStateCycle(ScaleState actual) {

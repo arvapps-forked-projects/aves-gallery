@@ -9,7 +9,6 @@ import 'package:aves/model/entry/extensions/props.dart';
 import 'package:aves/model/filters/filters.dart';
 import 'package:aves/model/filters/trash.dart';
 import 'package:aves/model/highlight.dart';
-import 'package:aves/model/settings/enums/accessibility_animations.dart';
 import 'package:aves/model/settings/enums/accessibility_timeout.dart';
 import 'package:aves/model/settings/settings.dart';
 import 'package:aves/model/source/collection_lens.dart';
@@ -19,6 +18,7 @@ import 'package:aves/widgets/aves_app.dart';
 import 'package:aves/widgets/collection/collection_page.dart';
 import 'package:aves/widgets/common/action_mixins/feedback.dart';
 import 'package:aves/widgets/common/basic/insets.dart';
+import 'package:aves/widgets/common/providers/viewer_entry_provider.dart';
 import 'package:aves/widgets/viewer/action/video_action_delegate.dart';
 import 'package:aves/widgets/viewer/controls/controller.dart';
 import 'package:aves/widgets/viewer/controls/notifications.dart';
@@ -63,7 +63,6 @@ class EntryViewerStack extends StatefulWidget {
 }
 
 class _EntryViewerStackState extends State<EntryViewerStack> with EntryViewControllerMixin, FeedbackMixin, TickerProviderStateMixin, RouteAware {
-  final Floating _floating = Floating();
   late int _currentEntryIndex;
   late ValueNotifier<int> _currentVerticalPage;
   late PageController _horizontalPager, _verticalPager;
@@ -73,13 +72,13 @@ class _EntryViewerStackState extends State<EntryViewerStack> with EntryViewContr
   final ValueNotifier<bool> _viewLocked = ValueNotifier(false);
   final ValueNotifier<bool> _overlayExpandedNotifier = ValueNotifier(false);
   late AnimationController _verticalPageAnimationController, _overlayAnimationController;
-  late Animation<double> _overlayButtonScale, _overlayVideoControlScale, _overlayOpacity;
+  late CurvedAnimation _overlayButtonScale, _overlayVideoControlScale, _overlayOpacity, _overlayTopOffsetAnimation;
   late Animation<Offset> _overlayTopOffset;
   EdgeInsets? _frozenViewInsets, _frozenViewPadding;
   late VideoActionDelegate _videoActionDelegate;
-  final ValueNotifier<HeroInfo?> _heroInfoNotifier = ValueNotifier(null);
+  final ValueNotifier<EntryHeroInfo?> _heroInfoNotifier = ValueNotifier(null);
   bool _isEntryTracked = true;
-  Timer? _overlayHidingTimer, _videoPauseTimer;
+  Timer? _overlayHidingTimer, _appInactiveReactionTimer;
 
   @override
   bool get isViewingImage => _currentVerticalPage.value == imagePage;
@@ -118,7 +117,7 @@ class _EntryViewerStackState extends State<EntryViewerStack> with EntryViewContr
     final initialEntry = widget.initialEntry;
     final entry = entries.firstWhereOrNull((entry) => entry.id == initialEntry.id) ?? entries.firstOrNull;
     // opening hero, with viewer as target
-    _heroInfoNotifier.value = HeroInfo(collection?.id, entry);
+    _heroInfoNotifier.value = EntryHeroInfo(collection, entry);
     entryNotifier = viewerController.entryNotifier;
     entryNotifier.value = entry;
     _currentEntryIndex = max(0, entry != null ? entries.indexOf(entry) : -1);
@@ -158,10 +157,11 @@ class _EntryViewerStackState extends State<EntryViewerStack> with EntryViewContr
       parent: _overlayAnimationController,
       curve: Curves.easeOutQuad,
     );
-    _overlayTopOffset = Tween(begin: const Offset(0, -1), end: const Offset(0, 0)).animate(CurvedAnimation(
+    _overlayTopOffsetAnimation = CurvedAnimation(
       parent: _overlayAnimationController,
       curve: Curves.easeOutQuad,
-    ));
+    );
+    _overlayTopOffset = Tween(begin: const Offset(0, -1), end: const Offset(0, 0)).animate(_overlayTopOffsetAnimation);
     _overlayVisible.value = settings.showOverlayOnOpening && !viewerController.autopilot;
     _overlayVisible.addListener(_onOverlayVisibleChanged);
     _viewLocked.addListener(_onViewLockedChanged);
@@ -184,10 +184,13 @@ class _EntryViewerStackState extends State<EntryViewerStack> with EntryViewContr
   @override
   void dispose() {
     AvesApp.pageRouteObserver.unsubscribe(this);
-    _floating.dispose();
     cleanEntryControllers(entryNotifier.value);
     _videoActionDelegate.dispose();
     _verticalPageAnimationController.dispose();
+    _overlayButtonScale.dispose();
+    _overlayVideoControlScale.dispose();
+    _overlayOpacity.dispose();
+    _overlayTopOffsetAnimation.dispose();
     _overlayAnimationController.dispose();
     _overlayVisible.dispose();
     _viewLocked.dispose();
@@ -198,7 +201,7 @@ class _EntryViewerStackState extends State<EntryViewerStack> with EntryViewContr
     _verticalScrollNotifier.dispose();
     _heroInfoNotifier.dispose();
     _stopOverlayHidingTimer();
-    _stopVideoPauseTimer();
+    _stopAppInactiveTimer();
     AvesApp.lifecycleStateNotifier.removeListener(_onAppLifecycleStateChanged);
     _unregisterWidget(widget);
     super.dispose();
@@ -217,12 +220,12 @@ class _EntryViewerStackState extends State<EntryViewerStack> with EntryViewContr
     final viewStateConductor = context.read<ViewStateConductor>();
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
 
         _onPopInvoked();
       },
-      child: ValueListenableProvider<HeroInfo?>.value(
+      child: ValueListenableProvider<EntryHeroInfo?>.value(
         value: _heroInfoNotifier,
         child: NotificationListener(
           onNotification: _handleNotification,
@@ -248,7 +251,7 @@ class _EntryViewerStackState extends State<EntryViewerStack> with EntryViewContr
               return StreamBuilder<PiPStatus>(
                 // as of floating v2.0.0, plugin assumes activity and fails when bound via service
                 // so we do not access status stream directly, but check for support first
-                stream: device.supportPictureInPicture ? _floating.pipStatusStream : Stream.value(PiPStatus.disabled),
+                stream: device.supportPictureInPicture ? Floating().pipStatusStream : Stream.value(PiPStatus.disabled),
                 builder: (context, snapshot) {
                   var pipEnabled = snapshot.data == PiPStatus.enabled;
                   return ValueListenableBuilder<bool>(
@@ -329,42 +332,43 @@ class _EntryViewerStackState extends State<EntryViewerStack> with EntryViewContr
     switch (AvesApp.lifecycleStateNotifier.value) {
       case AppLifecycleState.inactive:
         // inactive: when losing focus
-        _onAppInactive();
+        // also triggered when app is rotated on Android API >=33
+        _startAppInactiveTimer();
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
         // paused: when switching to another app
         // detached: when app is without a view
         viewerController.autopilot = false;
-        _stopVideoPauseTimer();
+        _stopAppInactiveTimer();
         pauseVideoControllers();
       case AppLifecycleState.resumed:
-        _stopVideoPauseTimer();
+        _stopAppInactiveTimer();
       case AppLifecycleState.hidden:
         // hidden: transient state between `inactive` and `paused`
         break;
     }
   }
 
-  Future<void> _onAppInactive() async {
-    final playingController = context.read<VideoConductor>().getPlayingController();
+  Future<void> _onAppInactive(AvesVideoController? playingController) async {
     bool enabledPip = false;
     if (settings.videoBackgroundMode == VideoBackgroundMode.pip) {
-      enabledPip |= await _enablePictureInPicture();
+      enabledPip |= await _enablePictureInPicture(playingController);
     }
     if (enabledPip) {
       // ensure playback, in case lifecycle paused/resumed events happened when switching to PiP
       await playingController?.play();
     } else {
-      _startVideoPauseTimer();
+      await pauseVideoControllers();
     }
   }
 
-  void _startVideoPauseTimer() {
-    _stopVideoPauseTimer();
-    _videoPauseTimer = Timer(ADurations.videoPauseAppInactiveDelay, pauseVideoControllers);
+  void _startAppInactiveTimer() {
+    _stopAppInactiveTimer();
+    final playingController = context.read<VideoConductor>().getPlayingController();
+    _appInactiveReactionTimer = Timer(ADurations.appInactiveReactionDelay, () => _onAppInactive(playingController));
   }
 
-  void _stopVideoPauseTimer() => _videoPauseTimer?.cancel();
+  void _stopAppInactiveTimer() => _appInactiveReactionTimer?.cancel();
 
   Widget _decorateOverlay(Widget overlay) {
     return ValueListenableBuilder<double>(
@@ -409,17 +413,17 @@ class _EntryViewerStackState extends State<EntryViewerStack> with EntryViewContr
   }
 
   Widget _buildSlideshowBottomOverlay(Size availableSize) {
-    return SizedBox.fromSize(
-      size: availableSize,
+    return TooltipTheme(
+      data: TooltipTheme.of(context).copyWith(
+        preferBelow: false,
+      ),
       child: Align(
         alignment: AlignmentDirectional.bottomEnd,
-        child: TooltipTheme(
-          data: TooltipTheme.of(context).copyWith(
-            preferBelow: false,
-          ),
-          child: SlideshowButtons(
-            animationController: _overlayAnimationController,
-          ),
+        child: SlideshowBottomOverlay(
+          animationController: _overlayAnimationController,
+          availableSize: availableSize,
+          viewInsets: _frozenViewInsets,
+          viewPadding: _frozenViewPadding,
         ),
       ),
     );
@@ -490,13 +494,6 @@ class _EntryViewerStackState extends State<EntryViewerStack> with EntryViewContr
                       action: action,
                     );
                   }
-                },
-                onActionMenuOpened: () {
-                  // if the menu is opened while overlay is hiding,
-                  // the popup menu button is disposed and menu items are ineffective,
-                  // so we make sure overlay stays visible
-                  _videoActionDelegate.stopOverlayHidingTimer();
-                  const ToggleOverlayNotification(visible: true).dispatch(context);
                 },
               ),
             );
@@ -572,9 +569,12 @@ class _EntryViewerStackState extends State<EntryViewerStack> with EntryViewContr
     } else if (notification is CastNotification) {
       _cast(notification.enabled);
     } else if (notification is FullImageLoadedNotification) {
-      final viewStateController = context.read<ViewStateConductor>().getOrCreateController(notification.entry);
       // microtask so that listeners do not trigger during build
-      scheduleMicrotask(() => viewStateController.fullImageNotifier.value = notification.image);
+      scheduleMicrotask(() {
+        if (!mounted) return;
+        final viewStateController = context.read<ViewStateConductor>().getController(notification.entry);
+        viewStateController?.fullImageNotifier.value = notification.image;
+      });
     } else if (notification is EntryDeletedNotification) {
       _onEntryRemoved(context, notification.entries);
     } else if (notification is EntryMovedNotification) {
@@ -599,6 +599,13 @@ class _EntryViewerStackState extends State<EntryViewerStack> with EntryViewContr
         case MoveType.export:
           break;
       }
+    } else if (notification is PopupMenuOpenedNotification) {
+      // if the menu is opened while overlay is hiding,
+      // the popup menu button is disposed and menu items are ineffective,
+      // so we make sure overlay stays visible
+      _overlayVisible.value = true;
+      _videoActionDelegate.stopOverlayHidingTimer();
+      dismissFeedback(context);
     } else if (notification is ToggleOverlayNotification) {
       _overlayVisible.value = notification.visible ?? !_overlayVisible.value;
     } else if (notification is LockViewNotification) {
@@ -680,7 +687,7 @@ class _EntryViewerStackState extends State<EntryViewerStack> with EntryViewContr
     final baseCollection = collection;
     if (baseCollection == null) return;
 
-    unawaited(_onLeave());
+    await _onLeave();
     final uri = entryNotifier.value?.uri;
     unawaited(Navigator.maybeOf(context)?.pushAndRemoveUntil(
       MaterialPageRoute(
@@ -696,7 +703,7 @@ class _EntryViewerStackState extends State<EntryViewerStack> with EntryViewContr
   }
 
   Future<void> _goToVerticalPage(int page) async {
-    if (settings.accessibilityAnimations.animate) {
+    if (settings.animate) {
       final start = _verticalPager.offset;
       final end = _verticalPager.position.viewportDimension * page;
       final simulation = ScrollSpringSimulation(ViewerVerticalPageView.spring, start, end, 0);
@@ -709,16 +716,23 @@ class _EntryViewerStackState extends State<EntryViewerStack> with EntryViewContr
   void _onVerticalPageChanged(int page) {
     _currentVerticalPage.value = page;
     _overrideSnackBarMargin();
+    final animate = context.read<Settings>().animate;
     switch (page) {
       case transitionPage:
         dismissFeedback(context);
         _popVisual();
+        if (!animate) {
+          _verticalPager.jumpToPage(page);
+        }
       case imagePage:
         reportService.log('Nav move to Image page');
       case infoPage:
         reportService.log('Nav move to Info page');
         // prevent hero when viewer is offscreen
         _heroInfoNotifier.value = null;
+        if (!animate) {
+          _verticalPager.jumpToPage(page);
+        }
     }
   }
 
@@ -790,11 +804,11 @@ class _EntryViewerStackState extends State<EntryViewerStack> with EntryViewContr
         if (collectionEntries.remove(removedEntry)) return;
 
         // remove from burst
-        final mainEntry = collectionEntries.firstWhereOrNull((entry) => entry.burstEntries?.contains(removedEntry) == true);
+        final mainEntry = collectionEntries.firstWhereOrNull((entry) => entry.stackedEntries?.contains(removedEntry) == true);
         if (mainEntry != null) {
           final multiPageController = context.read<MultiPageConductor>().getController(mainEntry);
           if (multiPageController != null) {
-            mainEntry.burstEntries!.remove(removedEntry);
+            mainEntry.stackedEntries!.remove(removedEntry);
             multiPageController.reset();
           }
         }
@@ -849,12 +863,12 @@ class _EntryViewerStackState extends State<EntryViewerStack> with EntryViewContr
   void _popVisual() {
     if (Navigator.canPop(context)) {
       Future<void> pop() async {
-        unawaited(_onLeave());
+        await _onLeave();
         Navigator.maybeOf(context)?.pop();
       }
 
       // closing hero, with viewer as source
-      final heroInfo = HeroInfo(collection?.id, entryNotifier.value);
+      final heroInfo = EntryHeroInfo(collection, entryNotifier.value);
       if (_heroInfoNotifier.value != heroInfo) {
         _heroInfoNotifier.value = heroInfo;
         // we post closing the viewer page so that hero animation source is ready
@@ -887,6 +901,7 @@ class _EntryViewerStackState extends State<EntryViewerStack> with EntryViewContr
             predicate: (v) => v < 1,
             animate: false,
           );
+      context.read<ViewerEntryNotifier>().value = entry;
     }
   }
 
@@ -913,12 +928,15 @@ class _EntryViewerStackState extends State<EntryViewerStack> with EntryViewContr
     if (!settings.useTvLayout) {
       await windowService.requestOrientation();
     }
+    // delay to prevent white/black flash on page transition
+    // from a viewer with a transparent background and no system UI
+    // to a regular page with system UI
+    await Future.delayed(const Duration(milliseconds: 50));
   }
 
-  Future<bool> _enablePictureInPicture() async {
-    final videoController = context.read<VideoConductor>().getPlayingController();
-    if (videoController != null) {
-      final entrySize = videoController.entry.displaySize;
+  Future<bool> _enablePictureInPicture(AvesVideoController? playingController) async {
+    if (playingController != null) {
+      final entrySize = playingController.entry.displaySize;
       final aspectRatio = Rational(entrySize.width.round(), entrySize.height.round());
 
       final viewSize = MediaQuery.sizeOf(context) * MediaQuery.devicePixelRatioOf(context);
@@ -931,7 +949,7 @@ class _EntryViewerStackState extends State<EntryViewerStack> with EntryViewContr
       );
 
       try {
-        final status = await _floating.enable(EnableManual(
+        final status = await Floating().enable(ImmediatePiP(
           aspectRatio: aspectRatio,
           sourceRectHint: sourceRectHint,
         ));

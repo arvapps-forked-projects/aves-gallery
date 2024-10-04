@@ -6,8 +6,6 @@ extension ExtraEntryMapStyle on EntryMapStyle {
       case EntryMapStyle.googleNormal:
       case EntryMapStyle.googleHybrid:
       case EntryMapStyle.googleTerrain:
-      case EntryMapStyle.hmsNormal:
-      case EntryMapStyle.hmsTerrain:
         return true;
       default:
         return false;
@@ -16,11 +14,12 @@ extension ExtraEntryMapStyle on EntryMapStyle {
 
   bool get needMobileService {
     switch (this) {
-      case EntryMapStyle.osmHot:
-      case EntryMapStyle.stamenWatercolor:
-        return false;
-      default:
+      case EntryMapStyle.googleNormal:
+      case EntryMapStyle.googleHybrid:
+      case EntryMapStyle.googleTerrain:
         return true;
+      default:
+        return false;
     }
   }
 }

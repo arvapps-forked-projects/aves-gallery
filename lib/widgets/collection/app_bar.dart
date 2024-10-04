@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:aves/app_mode.dart';
 import 'package:aves/model/entry/entry.dart';
@@ -78,6 +79,7 @@ class _CollectionAppBarState extends State<CollectionAppBar> with SingleTickerPr
     EntrySortFactor.size,
     EntrySortFactor.name,
     EntrySortFactor.rating,
+    EntrySortFactor.duration,
   ];
 
   static const _groupOptions = [
@@ -91,6 +93,11 @@ class _CollectionAppBarState extends State<CollectionAppBar> with SingleTickerPr
     TileLayout.mosaic,
     TileLayout.grid,
     TileLayout.list,
+  ];
+
+  static const _trashSelectionQuickActions = [
+    EntrySetAction.delete,
+    EntrySetAction.restore,
   ];
 
   @override
@@ -171,7 +178,6 @@ class _CollectionAppBarState extends State<CollectionAppBar> with SingleTickerPr
                 selector: (context, s) => s.collectionBrowsingQuickActions,
                 builder: (context, _, child) {
                   final useTvLayout = settings.useTvLayout;
-                  final actions = _buildActions(context, selection);
                   final onFilterTap = canRemoveFilters ? collection.removeFilter : null;
                   return AvesAppBar(
                     contentHeight: appBarContentHeight,
@@ -181,7 +187,7 @@ class _CollectionAppBarState extends State<CollectionAppBar> with SingleTickerPr
                       isSelecting: isSelecting,
                     ),
                     title: _buildAppBarTitle(isSelecting),
-                    actions: useTvLayout ? [] : actions,
+                    actions: (context, maxWidth) => useTvLayout ? [] : _buildActions(context, selection, maxWidth),
                     bottom: Column(
                       children: [
                         if (useTvLayout)
@@ -190,7 +196,7 @@ class _CollectionAppBarState extends State<CollectionAppBar> with SingleTickerPr
                             child: ListView(
                               padding: const EdgeInsets.symmetric(horizontal: 8),
                               scrollDirection: Axis.horizontal,
-                              children: actions,
+                              children: _buildActions(context, selection, double.infinity),
                             ),
                           ),
                         if (showFilterBar)
@@ -301,7 +307,7 @@ class _CollectionAppBarState extends State<CollectionAppBar> with SingleTickerPr
     }
   }
 
-  List<Widget> _buildActions(BuildContext context, Selection<AvesEntry> selection) {
+  List<Widget> _buildActions(BuildContext context, Selection<AvesEntry> selection, double maxWidth) {
     final appMode = context.watch<ValueNotifier<AppMode>>().value;
     final isSelecting = selection.isSelecting;
     final selectedItemCount = selection.selectedItems.length;
@@ -333,6 +339,7 @@ class _CollectionAppBarState extends State<CollectionAppBar> with SingleTickerPr
             context: context,
             appMode: appMode,
             selection: selection,
+            maxWidth: maxWidth,
             isVisible: isVisible,
             canApply: canApply,
           );
@@ -366,20 +373,29 @@ class _CollectionAppBarState extends State<CollectionAppBar> with SingleTickerPr
     }).toList();
   }
 
+  static double _iconButtonWidth(BuildContext context) {
+    const defaultPadding = EdgeInsets.all(8);
+    const defaultIconSize = 24.0;
+    return defaultPadding.horizontal + MediaQuery.textScalerOf(context).scale(defaultIconSize);
+  }
+
   List<Widget> _buildMobileActions({
     required BuildContext context,
     required AppMode appMode,
     required Selection<AvesEntry> selection,
+    required double maxWidth,
     required bool Function(EntrySetAction action) isVisible,
     required bool Function(EntrySetAction action) canApply,
   }) {
+    final availableCount = (maxWidth / _iconButtonWidth(context)).floor();
+
     final isSelecting = selection.isSelecting;
     final selectedItemCount = selection.selectedItems.length;
     final hasSelection = selectedItemCount > 0;
 
     final browsingQuickActions = settings.collectionBrowsingQuickActions;
-    final selectionQuickActions = isTrash ? [EntrySetAction.delete, EntrySetAction.restore] : settings.collectionSelectionQuickActions;
-    final quickActions = isSelecting ? selectionQuickActions : browsingQuickActions;
+    final selectionQuickActions = isTrash ? _trashSelectionQuickActions : settings.collectionSelectionQuickActions;
+    final quickActions = (isSelecting ? selectionQuickActions : browsingQuickActions).take(max(0, availableCount - 1)).toList();
     final quickActionButtons = quickActions.where(isVisible).map(
           (action) => _buildButtonIcon(context, action, enabled: canApply(action), selection: selection),
         );
@@ -396,7 +412,7 @@ class _CollectionAppBarState extends State<CollectionAppBar> with SingleTickerPr
                 (action) => _toMenuItem(action, enabled: canApply(action), selection: selection),
               );
 
-          final allContextualActions = isSelecting ? EntrySetActions.pageSelection: EntrySetActions.pageBrowsing;
+          final allContextualActions = isSelecting ? EntrySetActions.pageSelection : EntrySetActions.pageBrowsing;
           final contextualMenuActions = allContextualActions.where(_isValidForMenu).fold(<EntrySetAction?>[], (prev, v) {
             if (v == null && (prev.isEmpty || prev.last == null)) return prev;
             return [...prev, v];
@@ -420,7 +436,7 @@ class _CollectionAppBarState extends State<CollectionAppBar> with SingleTickerPr
                 title: context.l10n.collectionActionEdit,
                 items: [
                   _buildRotateAndFlipMenuItems(context, canApply: canApply),
-                  ...EntrySetActions.edit.where((v) => isVisible(v) && !selectionQuickActions.contains(v)).map((action) => _toMenuItem(action, enabled: canApply(action), selection: selection)),
+                  ...EntrySetActions.edit.where((v) => isVisible(v) && !quickActions.contains(v)).map((action) => _toMenuItem(action, enabled: canApply(action), selection: selection)),
                 ],
               ),
           ];
@@ -444,7 +460,7 @@ class _CollectionAppBarState extends State<CollectionAppBar> with SingleTickerPr
   }
 
   Set<AvesEntry> _getExpandedSelectedItems(Selection<AvesEntry> selection) {
-    return selection.selectedItems.expand((entry) => entry.burstEntries ?? {entry}).toSet();
+    return selection.selectedItems.expand((entry) => entry.stackedEntries ?? {entry}).toSet();
   }
 
   // key is expected by test driver (e.g. 'menu-configureView', 'menu-map')
@@ -675,7 +691,7 @@ class _CollectionAppBarState extends State<CollectionAppBar> with SingleTickerPr
       routeSettings: const RouteSettings(name: TileViewDialog.routeName),
     );
     // wait for the dialog to hide as applying the change may block the UI
-    await Future.delayed(ADurations.dialogTransitionAnimation * timeDilation);
+    await Future.delayed(ADurations.dialogTransitionLoose * timeDilation);
     if (value != null && initialValue != value) {
       settings.collectionSortFactor = value.$1!;
       settings.collectionSectionFactor = value.$2!;

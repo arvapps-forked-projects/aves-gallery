@@ -7,9 +7,8 @@ import 'package:aves/model/entry/extensions/info.dart';
 import 'package:aves/model/entry/extensions/metadata_edition.dart';
 import 'package:aves/model/entry/extensions/multipage.dart';
 import 'package:aves/model/entry/extensions/props.dart';
-import 'package:aves/model/events.dart';
 import 'package:aves/model/filters/filters.dart';
-import 'package:aves/model/geotiff.dart';
+import 'package:aves/model/media/geotiff.dart';
 import 'package:aves/model/settings/settings.dart';
 import 'package:aves/model/source/collection_lens.dart';
 import 'package:aves/ref/mime_types.dart';
@@ -92,7 +91,7 @@ class EntryInfoActionDelegate with FeedbackMixin, PermissionAwareMixin, EntryEdi
     }
   }
 
-  void onActionSelected(BuildContext context, AvesEntry targetEntry, CollectionLens? collection, EntryAction action) async {
+  Future<void> onActionSelected(BuildContext context, AvesEntry targetEntry, CollectionLens? collection, EntryAction action) async {
     await reportService.log('$action');
     _eventStreamController.add(ActionStartedEvent(action));
     switch (action) {
